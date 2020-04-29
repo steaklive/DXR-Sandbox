@@ -1,3 +1,9 @@
+.vs/
+
+# ignore external libraries
+external/Assimp
+external/DirectXTK12
+
 # Prerequisites
 *.d
 

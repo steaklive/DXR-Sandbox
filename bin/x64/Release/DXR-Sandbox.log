@@ -1,0 +1,17 @@
+﻿  DXRSGraphics.cpp
+  DXRSModel.cpp
+  DXRS.cpp
+  DXRMesh.cpp
+C:\Users\Zhenya\Documents\GraphicsProgramming\DXR-Sandbox\source\DXRMesh.cpp(181,55): warning C4312: 'reinterpret_cast': conversion from '_Ty' to 'BYTE *' of greater size
+          with
+          [
+              _Ty=std::_Vbase
+          ]
+  DXRSModelMaterial.cpp
+  DXRSExampleScene.cpp
+     Creating library C:\Users\Zhenya\Documents\GraphicsProgramming\DXR-Sandbox\\bin\x64\Release\DXR-Sandbox.lib and object C:\Users\Zhenya\Documents\GraphicsProgramming\DXR-Sandbox\\bin\x64\Release\DXR-Sandbox.exp
+  Generating code
+  Previous IPDB not found, fall back to full compilation.
+  All 655 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
+  Finished generating code
+  DXR-Sandbox.vcxproj -> C:\Users\Zhenya\Documents\GraphicsProgramming\DXR-Sandbox\\bin\x64\Release\DXR-Sandbox.exe
