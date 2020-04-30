@@ -184,7 +184,7 @@
     <ClCompile Include="source\DXRSGraphics.cpp" />
     <ClCompile Include="source\DXRSModel.cpp" />
     <ClCompile Include="source\DXRS.cpp" />
-    <ClCompile Include="source\DXRMesh.cpp" />
+    <ClCompile Include="source\DXRSMesh.cpp" />
     <ClCompile Include="source\DXRSModelMaterial.cpp" />
     <ClCompile Include="source\DXRSExampleScene.cpp" />
   </ItemGroup>

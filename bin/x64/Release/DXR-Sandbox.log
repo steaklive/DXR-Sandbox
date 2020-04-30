@@ -1,17 +1,11 @@
-﻿  DXRSGraphics.cpp
-  DXRSModel.cpp
-  DXRS.cpp
-  DXRMesh.cpp
-C:\Users\Zhenya\Documents\GraphicsProgramming\DXR-Sandbox\source\DXRMesh.cpp(181,55): warning C4312: 'reinterpret_cast': conversion from '_Ty' to 'BYTE *' of greater size
-          with
-          [
-              _Ty=std::_Vbase
-          ]
-  DXRSModelMaterial.cpp
+﻿  DXRS.cpp
+C:\Users\Zhenya\Documents\GraphicsProgramming\DXR-Sandbox\source\DXRSMesh.h(47,23): warning C4267: 'return': conversion from 'size_t' to 'UINT', possible loss of data
   DXRSExampleScene.cpp
+C:\Users\Zhenya\Documents\GraphicsProgramming\DXR-Sandbox\source\DXRSMesh.h(47,23): warning C4267: 'return': conversion from 'size_t' to 'UINT', possible loss of data
      Creating library C:\Users\Zhenya\Documents\GraphicsProgramming\DXR-Sandbox\\bin\x64\Release\DXR-Sandbox.lib and object C:\Users\Zhenya\Documents\GraphicsProgramming\DXR-Sandbox\\bin\x64\Release\DXR-Sandbox.exp
   Generating code
-  Previous IPDB not found, fall back to full compilation.
-  All 655 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
+  25 of 1180 functions ( 2.1%) were compiled, the rest were copied from previous compilation.
+    0 functions were new in current compilation
+    59 functions had inline decision re-evaluated but remain unchanged
   Finished generating code
   DXR-Sandbox.vcxproj -> C:\Users\Zhenya\Documents\GraphicsProgramming\DXR-Sandbox\\bin\x64\Release\DXR-Sandbox.exe

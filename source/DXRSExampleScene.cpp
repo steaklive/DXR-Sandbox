@@ -2,7 +2,7 @@
 
 DXRSExampleScene::DXRSExampleScene()
 {
-	mSandboxFramework = std::make_unique<DXRSGraphics>();
+    mSandboxFramework = new DXRSGraphics();
 }
 
 DXRSExampleScene::~DXRSExampleScene()
@@ -25,6 +25,10 @@ void DXRSExampleScene::Init(HWND window, int width, int height)
 
     mSandboxFramework->CreateWindowResources();
     CreateWindowResources();
+
+    //create dragon model
+    mDragonModel = U_PTR<DXRSModel>(new DXRSModel(*mSandboxFramework, "C:\\Users\\Zhenya\\Documents\\GraphicsProgramming\\DXR-Sandbox\\content\\models\\dragon.fbx", true));
+
 }
 
 void DXRSExampleScene::Clear()
@@ -59,14 +63,11 @@ void DXRSExampleScene::Update(DXRSTimer const& timer)
     Vector3 eye(0.0f, 0.0f, 1.5f);
     Vector3 at(0.0f, 0.0f, 0.0f);
 
-    m_view = Matrix::CreateLookAt(eye, at, Vector3::UnitY);
+    mView = Matrix::CreateLookAt(eye, at, Vector3::UnitY);
 
-    m_world = Matrix::CreateRotationY(float(timer.GetTotalSeconds() * DirectX::XM_PIDIV4));
+    mWorld = Matrix::CreateRotationY(float(timer.GetTotalSeconds() * DirectX::XM_PIDIV4));
 
-    m_lineEffect->SetView(m_view);
-    m_lineEffect->SetWorld(Matrix::Identity);
-
-    m_shapeEffect->SetView(m_view);
+    mBasicEffect->SetView(mView);
 
 
     auto pad = mGamePad->GetState(0);
@@ -108,63 +109,32 @@ void DXRSExampleScene::Render()
     auto commandList = mSandboxFramework->GetCommandList();
 
     // Set the descriptor heaps
-    ID3D12DescriptorHeap* heaps[] = { m_resourceDescriptors->Heap(), m_states->Heap() };
+    ID3D12DescriptorHeap* heaps[] = { mResourceDescriptors->Heap(), mStates->Heap() };
     commandList->SetDescriptorHeaps(_countof(heaps), heaps);
 
 
-    XMMATRIX local = m_world *Matrix::CreateTranslation(0, 0.0f, -5.0f);
-    m_shapeEffect->SetWorld(local);
-    m_shapeEffect->Apply(commandList);
-    m_shape->Draw(commandList);
+    XMMATRIX local = mWorld * Matrix::CreateScale(0.2f, 0.2f, 0.2f) *  Matrix::CreateTranslation(0, -1.5f, -5.0f);
+    mBasicEffect->SetWorld(local);
+    mBasicEffect->Apply(commandList);
 
-   //// Draw model
-   //const XMVECTORF32 scale = { 0.01f, 0.01f, 0.01f };
-   //const XMVECTORF32 translate = { 3.f, -2.f, -4.f };
-   //XMVECTOR rotate = Quaternion::CreateFromYawPitchRoll(XM_PI / 2.f, 0.f, -XM_PI / 2.f);
-   //XMMATRIX local = m_world * XMMatrixTransformation(g_XMZero, Quaternion::Identity, scale, g_XMZero, rotate, translate);
-   //Model::UpdateEffectMatrices(m_modelEffects, local, m_view, m_projection);
-   //heaps[0] = m_modelResources->Heap();
-   //commandList->SetDescriptorHeaps(_countof(heaps), heaps);
-   //m_model->Draw(commandList, m_modelEffects.begin());
+    mDragonModel->Render(commandList);
 
     // Show the new frame.
     mSandboxFramework->Present();
-    m_graphicsMemory->Commit(mSandboxFramework->GetCommandQueue());
+    mGraphicsMemory->Commit(mSandboxFramework->GetCommandQueue());
 }
 
 void DXRSExampleScene::CreateDeviceResources()
 {
     auto device = mSandboxFramework->GetD3DDevice();
 
-    m_graphicsMemory = std::make_unique<GraphicsMemory>(device);
-    m_states = std::make_unique<CommonStates>(device);
+    mGraphicsMemory = std::make_unique<GraphicsMemory>(device);
+    mStates = std::make_unique<CommonStates>(device);
 
-    m_resourceDescriptors = std::make_unique<DescriptorHeap>(device,
+    mResourceDescriptors = std::make_unique<DescriptorHeap>(device,
         D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
         D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
         Descriptors::Count);
-
-    m_batch = std::make_unique<PrimitiveBatch<VertexPositionColor>>(device);
-
-    m_shape = GeometricPrimitive::CreateTeapot(4.f, 8);
-
-    // SDKMESH has to use clockwise winding with right-handed coordinates, so textures are flipped in U
-    wchar_t strFilePath[MAX_PATH] = { L"Tiny\\tiny.sdkmesh" };
-    //strFilePath = L"Tiny\\tiny.sdkmesh";
-
-    wchar_t txtPath[MAX_PATH] = {};
-    {
-        wchar_t drive[_MAX_DRIVE];
-        wchar_t path[_MAX_PATH];
-
-        if (_wsplitpath_s(strFilePath, drive, _MAX_DRIVE, path, _MAX_PATH, nullptr, 0, nullptr, 0))
-            throw std::exception("_wsplitpath_s");
-
-        if (_wmakepath_s(txtPath, _MAX_PATH, drive, path, nullptr, nullptr))
-            throw std::exception("_wmakepath_s");
-    }
-
-    //m_model = Model::CreateFromSDKMESH(device, strFilePath);
 
     {
         ResourceUploadBatch resourceUpload(device);
@@ -174,24 +144,12 @@ void DXRSExampleScene::CreateDeviceResources()
         //m_model->LoadStaticBuffers(device, resourceUpload);
 
         ThrowIfFailed(
-            CreateDDSTextureFromFile(device, resourceUpload, L"C:\\Users\\Zhenya\\Documents\\GraphicsProgramming\\DXR-Sandbox\\content\\textures\\seafloor.dds", m_texture1.ReleaseAndGetAddressOf())
+            CreateDDSTextureFromFile(device, resourceUpload, L"C:\\Users\\Zhenya\\Documents\\GraphicsProgramming\\DXR-Sandbox\\content\\textures\\seafloor.dds", mTexture1.ReleaseAndGetAddressOf())
         );
 
-        CreateShaderResourceView(device, m_texture1.Get(), m_resourceDescriptors->GetCpuHandle(Descriptors::SeaFloor));
+        CreateShaderResourceView(device, mTexture1.Get(), mResourceDescriptors->GetCpuHandle(Descriptors::SeaFloor));
 
         RenderTargetState rtState(mSandboxFramework->GetBackBufferFormat(), mSandboxFramework->GetDepthBufferFormat());
-
-        {
-            EffectPipelineStateDescription pd(
-                &VertexPositionColor::InputLayout,
-                CommonStates::Opaque,
-                CommonStates::DepthNone,
-                CommonStates::CullNone,
-                rtState,
-                D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE);
-
-            m_lineEffect = std::make_unique<BasicEffect>(device, EffectFlags::VertexColor, pd);
-        }
 
         {
             EffectPipelineStateDescription pd(
@@ -201,9 +159,9 @@ void DXRSExampleScene::CreateDeviceResources()
                 CommonStates::CullNone,
                 rtState);
 
-            m_shapeEffect = std::make_unique<BasicEffect>(device, EffectFlags::PerPixelLighting | EffectFlags::Texture, pd);
-            m_shapeEffect->EnableDefaultLighting();
-            m_shapeEffect->SetTexture(m_resourceDescriptors->GetGpuHandle(Descriptors::SeaFloor), m_states->AnisotropicWrap());
+            mBasicEffect = std::make_unique<BasicEffect>(device, EffectFlags::PerPixelLighting | EffectFlags::Texture, pd);
+            mBasicEffect->EnableDefaultLighting();
+            mBasicEffect->SetTexture(mResourceDescriptors->GetGpuHandle(Descriptors::SeaFloor), mStates->AnisotropicWrap());
         }
 
         //m_modelResources = m_model->LoadTextures(device, resourceUpload, txtPath);
@@ -248,15 +206,14 @@ void DXRSExampleScene::CreateWindowResources()
     }
 
     // This sample makes use of a right-handed coordinate system using row-major matrices.
-    m_projection = Matrix::CreatePerspectiveFieldOfView(
+    mProjection = Matrix::CreatePerspectiveFieldOfView(
         fovAngleY,
         aspectRatio,
         0.01f,
         100.0f
     );
 
-    m_lineEffect->SetProjection(m_projection);
-    m_shapeEffect->SetProjection(m_projection);
+    mBasicEffect->SetProjection(mProjection);
 }
 
 void DXRSExampleScene::OnWindowSizeChanged(int width, int height)

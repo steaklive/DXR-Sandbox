@@ -13,13 +13,27 @@ class DXRSModelMaterial;
 class DXRSMesh
 {
 public:
-	DXRSMesh(DXRSModel& model, DXRSModelMaterial* material);
-	DXRSMesh(DXRSModel& model, aiMesh& mesh);
+	struct Vertex
+	{
+		XMFLOAT3 position;
+		XMFLOAT3 normal;
+		XMFLOAT3 tangent;
+		XMFLOAT2 texcoord;
+	};
+
+	DXRSMesh(ID3D12Device* device, DXRSModel& model, DXRSModelMaterial* material);
+	DXRSMesh(ID3D12Device* device, DXRSModel& model, aiMesh& mesh);
 	~DXRSMesh();
 
 	DXRSModel& GetModel();
 	DXRSModelMaterial* GetMaterial();
 	const std::string& Name() const;
+
+	ID3D12Resource* GetVertexBuffer() { return mVertexBuffer.Get(); }
+	ID3D12Resource* GetIndexBuffer() { return mIndexBuffer.Get(); }
+
+	D3D12_VERTEX_BUFFER_VIEW& GetVertexBufferView() { return mVertexBufferView; }
+	D3D12_INDEX_BUFFER_VIEW& GetIndexBufferView() { return mIndexBufferView; }
 
 	const std::vector<XMFLOAT3>& Vertices() const;
 	const std::vector<XMFLOAT3>& Normals() const;
@@ -30,6 +44,9 @@ public:
 	UINT FaceCount() const;
 	const std::vector<UINT>& Indices() const;
 
+	UINT GetIndicesNum() { return mIndices.size(); }
+
+	void CreateVertexBuffer(ComPtr<ID3D12Resource> vertexBuffer, ComPtr<ID3D12Resource> vertexBufferUploadHeap);
 	void CreateIndexBuffer(ComPtr<ID3D12Resource> indexBuffer, ComPtr<ID3D12Resource> indexBufferUploadHeap);
 private:
 
@@ -40,7 +57,10 @@ private:
 	DXRSModelMaterial* mMaterial;
 
 	std::string mName;
-	std::vector<XMFLOAT3> mVertices;
+
+	std::vector<Vertex> mVertices;
+
+	std::vector<XMFLOAT3> mPositions;
 	std::vector<XMFLOAT3> mNormals;
 	std::vector<XMFLOAT3> mTangents;
 	std::vector<XMFLOAT3> mBiNormals;
@@ -48,4 +68,12 @@ private:
 	std::vector<std::vector<XMFLOAT4>*> mVertexColors;
 	UINT mFaceCount;
 	std::vector<UINT> mIndices;
+
+	UINT mNumOfIndices;
+
+	ComPtr<ID3D12Resource> mVertexBuffer;
+	ComPtr<ID3D12Resource> mIndexBuffer;
+
+	D3D12_VERTEX_BUFFER_VIEW mVertexBufferView;
+	D3D12_INDEX_BUFFER_VIEW mIndexBufferView;
 };

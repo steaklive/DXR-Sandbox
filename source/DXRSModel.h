@@ -26,6 +26,8 @@ public:
 	bool HasMeshes() const;
 	bool HasMaterials() const;
 
+	void Render(ID3D12GraphicsCommandList* commandList);
+
 	const std::vector<DXRSMesh*>& Meshes() const;
 	const std::vector<DXRSModelMaterial*>& Materials() const;
 	const std::string GetFileName() { return mFilename; }

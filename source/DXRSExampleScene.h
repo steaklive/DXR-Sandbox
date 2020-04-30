@@ -2,6 +2,7 @@
 
 #include "DXRSGraphics.h"
 #include "DXRSTimer.h"
+#include "DXRSModel.h"
 
 class DXRSExampleScene /*: public SandboxScene*/
 {
@@ -22,10 +23,13 @@ private:
     
     
 
-	U_PTR<DXRSGraphics>	        mSandboxFramework;
+    DXRSGraphics*   	        mSandboxFramework;
+
 	U_PTR<GamePad>	            mGamePad;
 	U_PTR<Keyboard>             mKeyboard;
 	U_PTR<Mouse>                mMouse;
+
+    U_PTR<DXRSModel>            mDragonModel;
 
 	DirectX::GamePad::ButtonStateTracker        mGamePadButtons;
 	DirectX::Keyboard::KeyboardStateTracker     mKeyboardButtons;
@@ -33,23 +37,17 @@ private:
     DXRSTimer m_timer;
 
     // DirectXTK objects.
-    U_PTR<GraphicsMemory>                                m_graphicsMemory;
-    U_PTR<DescriptorHeap>                                m_resourceDescriptors;
-    U_PTR<CommonStates>                                  m_states;
-    U_PTR<BasicEffect>                                   m_lineEffect;
-    U_PTR<PrimitiveBatch<VertexPositionColor>>           m_batch;
-    U_PTR<BasicEffect>                                   m_shapeEffect;
-    //U_PTR<Model>                                         m_model;
-    std::vector<std::shared_ptr<IEffect>>                m_modelEffects;
-    U_PTR<EffectTextureFactory>                          m_modelResources;
-    U_PTR<GeometricPrimitive>                            m_shape;
+    U_PTR<GraphicsMemory>                                mGraphicsMemory;
+    U_PTR<DescriptorHeap>                                mResourceDescriptors;
+    U_PTR<CommonStates>                                  mStates;
+    U_PTR<BasicEffect>                                   mBasicEffect;
+    U_PTR<EffectTextureFactory>                          mModelResources;
 
+    ComPtr<ID3D12Resource>                               mTexture1;
 
-    ComPtr<ID3D12Resource>                                  m_texture1;
-
-    Matrix                                             m_world;
-    Matrix                                             m_view;
-    Matrix                                             m_projection;
+    Matrix                                               mWorld;
+    Matrix                                               mView;
+    Matrix                                               mProjection;
 
     // Descriptors
     enum Descriptors

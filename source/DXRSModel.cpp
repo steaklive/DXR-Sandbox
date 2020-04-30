@@ -34,7 +34,7 @@ DXRSModel::DXRSModel(DXRSGraphics& dxWrapper, const std::string& filename, bool 
 		{
 			DXRSModelMaterial* material = (mMaterials.size() > i ? mMaterials.at(i) : nullptr);
 
-			DXRSMesh* mesh = new DXRSMesh(*this, *(scene->mMeshes[i]));
+			DXRSMesh* mesh = new DXRSMesh(dxWrapper.GetD3DDevice(), *this, *(scene->mMeshes[i]));
 			mMeshes.push_back(mesh);
 		}
 	}
@@ -68,6 +68,18 @@ bool DXRSModel::HasMeshes() const
 bool DXRSModel::HasMaterials() const
 {
 	return (mMaterials.size() > 0);
+}
+
+void DXRSModel::Render(ID3D12GraphicsCommandList* commandList)
+{
+	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	for (DXRSMesh* mesh : mMeshes)
+	{
+		commandList->IASetVertexBuffers(0, 1, &mesh->GetVertexBufferView());
+		commandList->IASetIndexBuffer(&mesh->GetIndexBufferView());
+		commandList->DrawIndexedInstanced(mesh->GetIndicesNum(), 1, 0, 0, 0);
+	}
 }
 
 const std::vector<DXRSMesh*>& DXRSModel::Meshes() const
