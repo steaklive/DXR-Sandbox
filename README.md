@@ -1,6 +1,8 @@
 # DXR-Sandbox
 Simple framework for testing DirectX Raytracing and improving DirectX12 knowledge
 
+WORK IN PROGRESS!
+
 ![picture](screenshots/initial_setup.png)
 
 # Additional libraries
