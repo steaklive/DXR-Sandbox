@@ -1,11 +1,8 @@
-﻿  DXRS.cpp
-C:\Users\Zhenya\Documents\GraphicsProgramming\DXR-Sandbox\source\DXRSMesh.h(47,23): warning C4267: 'return': conversion from 'size_t' to 'UINT', possible loss of data
-  DXRSExampleScene.cpp
-C:\Users\Zhenya\Documents\GraphicsProgramming\DXR-Sandbox\source\DXRSMesh.h(47,23): warning C4267: 'return': conversion from 'size_t' to 'UINT', possible loss of data
+﻿  DXRSRenderTarget.cpp
      Creating library C:\Users\Zhenya\Documents\GraphicsProgramming\DXR-Sandbox\\bin\x64\Release\DXR-Sandbox.lib and object C:\Users\Zhenya\Documents\GraphicsProgramming\DXR-Sandbox\\bin\x64\Release\DXR-Sandbox.exp
   Generating code
-  25 of 1180 functions ( 2.1%) were compiled, the rest were copied from previous compilation.
+  0 of 1180 functions ( 0.0%) were compiled, the rest were copied from previous compilation.
     0 functions were new in current compilation
-    59 functions had inline decision re-evaluated but remain unchanged
+    11 functions had inline decision re-evaluated but remain unchanged
   Finished generating code
   DXR-Sandbox.vcxproj -> C:\Users\Zhenya\Documents\GraphicsProgramming\DXR-Sandbox\\bin\x64\Release\DXR-Sandbox.exe

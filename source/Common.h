@@ -36,6 +36,10 @@
 #include "VertexTypes.h"
 
 
+// Windows Runtime Library. Needed for Microsoft::WRL::ComPtr<> template class.
+#include <wrl.h>
+using namespace Microsoft::WRL;
+
 using namespace DirectX;
 using namespace DirectX::SimpleMath;
 

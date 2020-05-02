@@ -163,10 +163,12 @@
   <ItemGroup>
     <ClInclude Include="Resource.h" />
     <ClInclude Include="source\Common.h" />
+    <ClInclude Include="source\DXRSDepthBuffer.h" />
     <ClInclude Include="source\DXRSGraphics.h" />
     <ClInclude Include="source\DXRSModel.h" />
     <ClInclude Include="source\DXRSMesh.h" />
     <ClInclude Include="source\DXRSModelMaterial.h" />
+    <ClInclude Include="source\DXRSRenderTarget.h" />
     <ClInclude Include="source\Resource.h" />
     <ClInclude Include="source\DXRSScene.h" />
     <ClInclude Include="source\DXRSTimer.h" />
@@ -181,12 +183,14 @@
     <Image Include="DXRS.ico" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="source\DXRSDepthBuffer.cpp" />
     <ClCompile Include="source\DXRSGraphics.cpp" />
     <ClCompile Include="source\DXRSModel.cpp" />
     <ClCompile Include="source\DXRS.cpp" />
     <ClCompile Include="source\DXRSMesh.cpp" />
     <ClCompile Include="source\DXRSModelMaterial.cpp" />
     <ClCompile Include="source\DXRSExampleScene.cpp" />
+    <ClCompile Include="source\DXRSRenderTarget.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
