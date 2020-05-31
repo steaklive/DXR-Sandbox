@@ -13,6 +13,9 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Source Files\Shaders">
+      <UniqueIdentifier>{40097630-fa5f-417e-a488-a85966aa1e0c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="source\Common.h">
@@ -57,6 +60,18 @@
     <ClInclude Include="source\DXRSRenderTarget.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="source\DescriptorHeap.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\DXRSBuffer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\PipelineStateObject.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\RootSignature.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="DXR-Sandbox.rc">
@@ -93,5 +108,28 @@
     <ClCompile Include="source\DXRSRenderTarget.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="source\DescriptorHeap.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\DXRSBuffer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\PipelineStateObject.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\RootSignature.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="content\shaders\GBuffer.hlsl">
+      <Filter>Source Files\Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="content\shaders\Lighting.hlsl">
+      <Filter>Source Files\Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="content\shaders\Composite.hlsl">
+      <Filter>Source Files\Shaders</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

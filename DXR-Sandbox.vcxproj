@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -102,8 +102,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <PrecompiledHeader>
-      </PrecompiledHeader>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -163,16 +162,20 @@
   <ItemGroup>
     <ClInclude Include="Resource.h" />
     <ClInclude Include="source\Common.h" />
+    <ClInclude Include="source\DescriptorHeap.h" />
+    <ClInclude Include="source\DXRSBuffer.h" />
     <ClInclude Include="source\DXRSDepthBuffer.h" />
     <ClInclude Include="source\DXRSGraphics.h" />
     <ClInclude Include="source\DXRSModel.h" />
     <ClInclude Include="source\DXRSMesh.h" />
     <ClInclude Include="source\DXRSModelMaterial.h" />
     <ClInclude Include="source\DXRSRenderTarget.h" />
+    <ClInclude Include="source\PipelineStateObject.h" />
     <ClInclude Include="source\Resource.h" />
     <ClInclude Include="source\DXRSScene.h" />
     <ClInclude Include="source\DXRSTimer.h" />
     <ClInclude Include="source\DXRSExampleScene.h" />
+    <ClInclude Include="source\RootSignature.h" />
     <ClInclude Include="source\targetver.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
@@ -183,6 +186,8 @@
     <Image Include="DXRS.ico" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="source\DescriptorHeap.cpp" />
+    <ClCompile Include="source\DXRSBuffer.cpp" />
     <ClCompile Include="source\DXRSDepthBuffer.cpp" />
     <ClCompile Include="source\DXRSGraphics.cpp" />
     <ClCompile Include="source\DXRSModel.cpp" />
@@ -191,6 +196,22 @@
     <ClCompile Include="source\DXRSModelMaterial.cpp" />
     <ClCompile Include="source\DXRSExampleScene.cpp" />
     <ClCompile Include="source\DXRSRenderTarget.cpp" />
+    <ClCompile Include="source\PipelineStateObject.cpp" />
+    <ClCompile Include="source\RootSignature.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="content\shaders\Composite.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </FxCompile>
+    <FxCompile Include="content\shaders\GBuffer.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </FxCompile>
+    <FxCompile Include="content\shaders\Lighting.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </FxCompile>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

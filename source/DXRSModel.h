@@ -4,6 +4,7 @@
 #include "DXRSGraphics.h"
 #include "DXRSMesh.h"
 #include "DXRSModelMaterial.h"
+#include "DXRSBuffer.h"
 
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
@@ -18,11 +19,20 @@ using namespace DirectX;
 
 class DXRSModel
 {
+	__declspec(align(16)) struct ModelConstantBuffer
+	{
+		XMMATRIX	World;
+	};
+
 public:
-	DXRSModel(DXRSGraphics& dxWrapper, const std::string& filename, bool flipUVs = false);
+	DXRSModel(DXRSGraphics& dxWrapper, const std::string& filename, bool flipUVs = false, XMMATRIX tranformWorld = XMMatrixIdentity());
 	~DXRSModel();
 
+	void UpdateWorldMatrix(XMMATRIX matrix);
+
 	DXRSGraphics& GetDXWrapper();
+
+	DXRSBuffer* GetCB() { return mBufferCB; }
 	bool HasMeshes() const;
 	bool HasMaterials() const;
 
@@ -40,6 +50,8 @@ private:
 	DXRSModel& operator=(const DXRSModel& rhs);
 
 	DXRSGraphics& mDXWrapper;
+
+	DXRSBuffer* mBufferCB;
 
 	std::vector<DXRSMesh*> mMeshes;
 	std::vector<DXRSModelMaterial*> mMaterials;

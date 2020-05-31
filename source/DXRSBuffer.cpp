@@ -1,0 +1,127 @@
+#include "DXRSBuffer.h"
+#include <string>
+
+DXRSBuffer::DXRSBuffer(ID3D12Device* device, DXRS::DescriptorHeapManager* descriptorManager, ID3D12GraphicsCommandList* commandList, Description& description, LPCWSTR name, unsigned char* data)
+	: m_description(description)
+	, m_data(data)
+	, m_cbvMappedData(nullptr)
+{
+	m_bufferSize = m_description.m_noofElements * m_description.m_elementSize;
+
+	if (m_description.m_descriptorType & DescriptorType::CBV)
+	{
+		m_bufferSize = Align(m_bufferSize, 256);
+	}
+
+	CreateResources(device, descriptorManager, commandList);
+
+	m_buffer->SetName(name);
+}
+
+
+void DXRSBuffer::CreateResources(ID3D12Device* device, DXRS::DescriptorHeapManager* descriptorManager, ID3D12GraphicsCommandList* commandList)
+{
+	D3D12_RESOURCE_DESC desc = {};
+	desc.Alignment = m_description.m_alignment;
+	desc.DepthOrArraySize = 1;
+	desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+	desc.Flags = m_description.m_resourceFlags;
+	desc.Format = DXGI_FORMAT_UNKNOWN;
+	desc.Height = 1;
+	desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+	desc.MipLevels = 1;
+	desc.SampleDesc.Count = 1;
+	desc.SampleDesc.Quality = 0;
+	desc.Width = (UINT64)m_bufferSize;
+
+	D3D12_HEAP_PROPERTIES heapProperties;
+	heapProperties.Type = (m_description.m_descriptorType & DescriptorType::CBV) ? D3D12_HEAP_TYPE_UPLOAD : D3D12_HEAP_TYPE_DEFAULT;
+	heapProperties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+	heapProperties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+	heapProperties.CreationNodeMask = 1;
+	heapProperties.VisibleNodeMask = 1;
+
+	ThrowIfFailed(
+		device->CreateCommittedResource(
+			&heapProperties,
+			D3D12_HEAP_FLAG_NONE,
+			&desc,
+			m_description.m_state,
+			nullptr,
+			IID_PPV_ARGS(&m_buffer)
+		)
+	);
+
+	if (m_data)
+	{
+		// Create the GPU upload buffer.
+		ThrowIfFailed(device->CreateCommittedResource(
+			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+			D3D12_HEAP_FLAG_NONE,
+			&CD3DX12_RESOURCE_DESC::Buffer(m_bufferSize),
+			D3D12_RESOURCE_STATE_GENERIC_READ,
+			nullptr,
+			IID_PPV_ARGS(&m_bufferUpload)));
+
+		D3D12_SUBRESOURCE_DATA data = {};
+		data.pData = m_data;
+		data.RowPitch = m_bufferSize;
+		data.SlicePitch = 0;
+
+		UpdateSubresources(commandList, m_buffer.Get(), m_bufferUpload.Get(), 0, 0, 1, &data);
+		commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_buffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
+	}
+	D3D12_DESCRIPTOR_HEAP_FLAGS flagsHeap = D3D12_DESCRIPTOR_HEAP_FLAGS::D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+
+	if (m_description.m_descriptorType & DescriptorType::SRV)
+	{
+		mDescriptorSRV = descriptorManager->CreateCPUHandle(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+		// Describe and create a SRV for the texture.
+		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+
+		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		srvDesc.Format = m_description.m_format;
+		if (m_description.m_state == D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE)
+		{
+			srvDesc.ViewDimension = D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE;
+			srvDesc.RaytracingAccelerationStructure.Location = m_buffer->GetGPUVirtualAddress();
+			device->CreateShaderResourceView(nullptr, &srvDesc, mDescriptorSRV.GetCPUHandle());
+		}
+		else
+		{
+			srvDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+			srvDesc.Buffer.NumElements = m_description.m_noofElements;
+			srvDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
+			if (m_description.m_descriptorType & DXRSBuffer::DescriptorType::Structured)
+			{
+				srvDesc.Buffer.StructureByteStride = m_description.m_elementSize;
+			}
+			else if (m_description.m_descriptorType & DXRSBuffer::DescriptorType::Raw)
+			{
+				srvDesc.Format = DXGI_FORMAT_R32_TYPELESS;
+				srvDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_RAW;
+			}
+			device->CreateShaderResourceView(m_buffer.Get(), &srvDesc, mDescriptorSRV.GetCPUHandle());
+		}
+	}
+
+	if (m_description.m_descriptorType & DescriptorType::CBV)
+	{
+		mDescriptorCBV = descriptorManager->CreateCPUHandle(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		// Describe and create a constant buffer view.
+		D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
+		cbvDesc.BufferLocation = m_buffer->GetGPUVirtualAddress();
+		cbvDesc.SizeInBytes = m_bufferSize;    // CB size is required to be 256-byte aligned.
+		device->CreateConstantBufferView(&cbvDesc, mDescriptorCBV.GetCPUHandle());
+	}
+
+}
+
+DXRSBuffer::~DXRSBuffer()
+{
+	if (m_cbvMappedData)
+		m_buffer->Unmap(0, nullptr);
+
+	m_cbvMappedData = nullptr;
+}

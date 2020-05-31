@@ -1,8 +1,15 @@
-﻿  DXRSRenderTarget.cpp
+﻿  DXRSExampleScene.cpp
+C:\Users\Zhenya\Documents\GraphicsProgramming\DXR-Sandbox\source\DXRSGraphics.h(62,1): warning C4267: 'argument': conversion from 'size_t' to 'UINT', possible loss of data
+C:\Users\Zhenya\Documents\GraphicsProgramming\DXR-Sandbox\source\DXRSMesh.h(43,23): warning C4267: 'return': conversion from 'size_t' to 'UINT', possible loss of data
+C:\Users\Zhenya\Documents\GraphicsProgramming\DXR-Sandbox\source\DXRSExampleScene.h(121,58): warning C4305: 'initializing': truncation from 'double' to 'float'
+C:\Users\Zhenya\Documents\GraphicsProgramming\DXR-Sandbox\source\DXRSExampleScene.cpp(442,59): warning C4244: 'argument': conversion from 'float' to 'LONG', possible loss of data
+C:\Users\Zhenya\Documents\GraphicsProgramming\DXR-Sandbox\source\DXRSExampleScene.cpp(442,50): warning C4244: 'argument': conversion from 'float' to 'LONG', possible loss of data
+C:\Users\Zhenya\Documents\GraphicsProgramming\DXR-Sandbox\source\DXRSExampleScene.cpp(442,44): warning C4244: 'argument': conversion from 'float' to 'LONG', possible loss of data
+C:\Users\Zhenya\Documents\GraphicsProgramming\DXR-Sandbox\source\DXRSExampleScene.cpp(442,38): warning C4244: 'argument': conversion from 'float' to 'LONG', possible loss of data
      Creating library C:\Users\Zhenya\Documents\GraphicsProgramming\DXR-Sandbox\\bin\x64\Release\DXR-Sandbox.lib and object C:\Users\Zhenya\Documents\GraphicsProgramming\DXR-Sandbox\\bin\x64\Release\DXR-Sandbox.exp
   Generating code
-  0 of 1180 functions ( 0.0%) were compiled, the rest were copied from previous compilation.
-    0 functions were new in current compilation
-    11 functions had inline decision re-evaluated but remain unchanged
+  43 of 1415 functions ( 3.0%) were compiled, the rest were copied from previous compilation.
+    3 functions were new in current compilation
+    26 functions had inline decision re-evaluated but remain unchanged
   Finished generating code
   DXR-Sandbox.vcxproj -> C:\Users\Zhenya\Documents\GraphicsProgramming\DXR-Sandbox\\bin\x64\Release\DXR-Sandbox.exe

@@ -9,6 +9,8 @@
 #include <dxgidebug.h>
 #endif
 
+#include <d3dcompiler.h>
+
 #include <algorithm>
 #include <exception>
 #include <memory>
@@ -19,7 +21,6 @@
 #include "CommonStates.h"
 #include "DirectXHelpers.h"
 #include "DDSTextureLoader.h"
-#include "DescriptorHeap.h"
 #include "Effects.h"
 #include "GamePad.h"
 #include "GeometricPrimitive.h"
@@ -35,6 +36,7 @@
 #include "SpriteFont.h" 
 #include "VertexTypes.h"
 
+#define Align(value, alignment) (((value + alignment - 1) / alignment) * alignment)
 
 // Windows Runtime Library. Needed for Microsoft::WRL::ComPtr<> template class.
 #include <wrl.h>

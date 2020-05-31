@@ -2,7 +2,7 @@
 
 #include "DXRSModel.h"
 
-DXRSModel::DXRSModel(DXRSGraphics& dxWrapper, const std::string& filename, bool flipUVs)
+DXRSModel::DXRSModel(DXRSGraphics& dxWrapper, const std::string& filename, bool flipUVs, XMMATRIX transformWorld)
 	: mMeshes(), mMaterials(), mDXWrapper(dxWrapper)
 {
 	Assimp::Importer importer;
@@ -40,6 +40,18 @@ DXRSModel::DXRSModel(DXRSGraphics& dxWrapper, const std::string& filename, bool 
 	}
 
 	mFilename = filename;
+
+	DXRSBuffer::Description desc;
+	desc.m_elementSize = sizeof(ModelConstantBuffer);
+	desc.m_state = D3D12_RESOURCE_STATE_GENERIC_READ;
+	desc.m_descriptorType = DXRSBuffer::DescriptorType::CBV;
+
+	mBufferCB = new DXRSBuffer(dxWrapper.GetD3DDevice(), dxWrapper.GetDescriptorHeapManager(), dxWrapper.GetCommandList(), desc, L"Model CB");
+
+	ModelConstantBuffer cbData = {};
+	cbData.World = transformWorld;
+	memcpy(mBufferCB->Map(), &cbData, sizeof(cbData));
+
 }
 
 DXRSModel::~DXRSModel()
@@ -53,6 +65,13 @@ DXRSModel::~DXRSModel()
 	{
 		delete material;
 	}
+}
+
+void DXRSModel::UpdateWorldMatrix(XMMATRIX matrix)
+{
+	ModelConstantBuffer cbData = {};
+	cbData.World = matrix;
+	memcpy(mBufferCB->Map(), &cbData, sizeof(cbData));
 }
 
 DXRSGraphics& DXRSModel::GetDXWrapper()

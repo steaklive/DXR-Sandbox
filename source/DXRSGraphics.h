@@ -12,6 +12,11 @@ using namespace Microsoft::WRL;
 // D3D12 extension library.
 #include <d3dx12.h>
 
+#include "Common.h"
+
+namespace DXRS {
+    class DescriptorHeapManager;
+}
 
 class DXRSGraphics
 {
@@ -49,6 +54,19 @@ public:
     inline CD3DX12_CPU_DESCRIPTOR_HANDLE GetRenderTargetView() const { return CD3DX12_CPU_DESCRIPTOR_HANDLE(mRTVDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), static_cast<INT>(mBackBufferIndex), mRTVDescriptorSize); }
     inline CD3DX12_CPU_DESCRIPTOR_HANDLE GetDepthStencilView() const { return CD3DX12_CPU_DESCRIPTOR_HANDLE(mDSVDescriptorHeap->GetCPUDescriptorHandleForHeapStart()); }
 
+    D3D12_VERTEX_BUFFER_VIEW&    GetFullscreenQuadBufferView() { return mFullscreenQuadVertexBufferView; }
+
+    void ResourceBarriersBegin(std::vector<CD3DX12_RESOURCE_BARRIER>& barriers) { barriers.clear(); }
+    void ResourceBarriersEnd(std::vector<CD3DX12_RESOURCE_BARRIER>& barriers, ID3D12GraphicsCommandList* commandList) {
+        size_t num = barriers.size();
+        if (num > 0)
+            commandList->ResourceBarrier(num, barriers.data());
+    }
+
+    DXRS::DescriptorHeapManager* GetDescriptorHeapManager() { return mDescriptorHeapManager; }
+
+    static const size_t                 MAX_BACK_BUFFER_COUNT = 3;
+    static UINT                         mBackBufferIndex;
 private:
 
     DXRSGraphics(const DXRSGraphics& rhs);
@@ -56,12 +74,14 @@ private:
 
     void MoveToNextFrame();
     void GetAdapter(IDXGIAdapter1** ppAdapter);
+    void CreateFullscreenQuadBuffers();
 
-    static const size_t                 MAX_BACK_BUFFER_COUNT = 3;
     
     ComPtr<IDXGIFactory4>               mDXGIFactory;
     ComPtr<IDXGISwapChain3>             mSwapChain;
     ComPtr<ID3D12Device>                mDevice;
+
+    DXRS::DescriptorHeapManager*        mDescriptorHeapManager;
 
     ComPtr<ID3D12CommandQueue>          mCommandQueue;
     ComPtr<ID3D12GraphicsCommandList>   mCommandList;
@@ -89,6 +109,10 @@ private:
     D3D_FEATURE_LEVEL                   mD3DFeatureLevel;
     DWORD                               mDXGIFactoryFlags;
 
-    UINT                                mBackBufferIndex;
+    // Fullscreen Quad
+    ComPtr<ID3D12Resource>              mFullscreenQuadVertexBuffer;
+    ComPtr<ID3D12Resource>              mFullscreenQuadVertexBufferUpload;
+    D3D12_VERTEX_BUFFER_VIEW            mFullscreenQuadVertexBufferView;
+
 
 };

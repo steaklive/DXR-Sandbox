@@ -1,24 +1,25 @@
 #pragma once
 #include "Common.h"
+#include "DescriptorHeap.h"
 
 class DXRSDepthBuffer
 {
 public:
-	DXRSDepthBuffer(ID3D12Device* device, int width, int height, DXGI_FORMAT format);
+	DXRSDepthBuffer(ID3D12Device* device, DXRS::DescriptorHeapManager* descriptorManager, int width, int height, DXGI_FORMAT format);
 	~DXRSDepthBuffer();
 
 	ID3D12Resource* GetResource() { return mDepthStencilResource.Get(); }
 	DXGI_FORMAT GetFormat() { return mFormat; }
-	void TransitionTo(ID3D12GraphicsCommandList* commandList, D3D12_RESOURCE_STATES stateAfter);
+	void TransitionTo(std::vector<CD3DX12_RESOURCE_BARRIER>& barriers, ID3D12GraphicsCommandList* commandList, D3D12_RESOURCE_STATES stateAfter);
 
-	D3D12_CPU_DESCRIPTOR_HANDLE GetDSV()
+	DXRS::DescriptorHandle GetDSV()
 	{
-		return mDescriptorDSV->GetFirstCpuHandle();
+		return mDescriptorDSV;
 	}
 
-	D3D12_CPU_DESCRIPTOR_HANDLE GetSRV()
+	DXRS::DescriptorHandle& GetSRV()
 	{
-		return mDescriptorSRV->GetFirstCpuHandle();
+		return mDescriptorSRV;
 	}
 
 private:
@@ -27,7 +28,7 @@ private:
 	DXGI_FORMAT mFormat;
 	D3D12_RESOURCE_STATES mCurrentResourceState;
 
-	U_PTR<DescriptorHeap> mDescriptorDSV;
-	U_PTR<DescriptorHeap> mDescriptorSRV;
+	DXRS::DescriptorHandle mDescriptorDSV;
+	DXRS::DescriptorHandle mDescriptorSRV;
 	ComPtr<ID3D12Resource> mDepthStencilResource;
 };

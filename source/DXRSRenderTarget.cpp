@@ -1,6 +1,6 @@
 #include "DXRSRenderTarget.h"
 
-DXRSRenderTarget::DXRSRenderTarget(ID3D12Device* device, int width, int height, DXGI_FORMAT aFormat, D3D12_RESOURCE_FLAGS flags, LPCWSTR name)
+DXRSRenderTarget::DXRSRenderTarget(ID3D12Device* device, DXRS::DescriptorHeapManager* descriptorManager, int width, int height, DXGI_FORMAT aFormat, D3D12_RESOURCE_FLAGS flags, LPCWSTR name)
 {
 	mWidth = width;
 	mHeight = height;
@@ -59,24 +59,24 @@ DXRSRenderTarget::DXRSRenderTarget(ID3D12Device* device, int width, int height, 
 	uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
 	uavDesc.Texture2D.MipSlice = 0;
 
-	mDescriptorRTV = std::make_unique<DescriptorHeap>(device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, flagsHeap, 1);
-	device->CreateRenderTargetView(mRenderTarget.Get(), &rtvDesc, mDescriptorRTV->GetFirstCpuHandle());
+	mDescriptorRTV = descriptorManager->CreateCPUHandle(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+	device->CreateRenderTargetView(mRenderTarget.Get(), &rtvDesc, mDescriptorRTV.GetCPUHandle());
 
-	mDescriptorSRV = std::make_unique<DescriptorHeap>(device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, flagsHeap, 1);
-	device->CreateShaderResourceView(mRenderTarget.Get(), &srvDesc, mDescriptorSRV->GetFirstCpuHandle());
+	mDescriptorSRV = descriptorManager->CreateCPUHandle(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	device->CreateShaderResourceView(mRenderTarget.Get(), &srvDesc, mDescriptorSRV.GetCPUHandle());
 
 	if (flags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)
 	{
-		mDescriptorUAV= std::make_unique<DescriptorHeap>(device,D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, flagsHeap,  1);
-		device->CreateUnorderedAccessView(mRenderTarget.Get(), nullptr, &uavDesc, mDescriptorUAV->GetFirstCpuHandle());
+		mDescriptorUAV = descriptorManager->CreateCPUHandle(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		device->CreateUnorderedAccessView(mRenderTarget.Get(), nullptr, &uavDesc, mDescriptorUAV.GetCPUHandle());
 	}
 }
 
-void DXRSRenderTarget::TransitionTo(ID3D12GraphicsCommandList* commandList, D3D12_RESOURCE_STATES stateAfter)
+void DXRSRenderTarget::TransitionTo(std::vector<CD3DX12_RESOURCE_BARRIER>& barriers, ID3D12GraphicsCommandList* commandList, D3D12_RESOURCE_STATES stateAfter)
 {
 	if (stateAfter != mCurrentResourceState)
 	{
-		D3D12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(GetResource(), mCurrentResourceState, D3D12_RESOURCE_STATE_PRESENT);
-		commandList->ResourceBarrier(1, &barrier);
+		barriers.push_back(CD3DX12_RESOURCE_BARRIER::Transition(GetResource(), mCurrentResourceState, D3D12_RESOURCE_STATE_PRESENT));
+		mCurrentResourceState = stateAfter;
 	}
 }

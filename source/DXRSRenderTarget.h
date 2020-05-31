@@ -1,31 +1,32 @@
 #pragma once
 #include "Common.h"
+#include "DescriptorHeap.h"
 
 class DXRSRenderTarget
 {
 public:
-	DXRSRenderTarget(ID3D12Device* device, int width, int height, DXGI_FORMAT aFormat, D3D12_RESOURCE_FLAGS flags, LPCWSTR name);
+	DXRSRenderTarget(ID3D12Device* device, DXRS::DescriptorHeapManager* descriptorManger, int width, int height, DXGI_FORMAT aFormat, D3D12_RESOURCE_FLAGS flags, LPCWSTR name);
 	~DXRSRenderTarget();
 
 	ID3D12Resource* GetResource() { return mRenderTarget.Get(); }
 
 	int GetWidth() { return mWidth; }
 	int GetHeight() { return mHeight; }
-	void TransitionTo(ID3D12GraphicsCommandList* commandList, D3D12_RESOURCE_STATES stateAfter);
+	void TransitionTo(std::vector<CD3DX12_RESOURCE_BARRIER>& barriers, ID3D12GraphicsCommandList* commandList, D3D12_RESOURCE_STATES stateAfter);
 
-	D3D12_CPU_DESCRIPTOR_HANDLE GetRTV()
+	DXRS::DescriptorHandle& GetRTV()
 	{
-		return mDescriptorRTV->GetFirstCpuHandle();
+		return mDescriptorRTV;
 	}
 
-	D3D12_CPU_DESCRIPTOR_HANDLE GetSRV()
+	DXRS::DescriptorHandle& GetSRV()
 	{
-		return mDescriptorSRV->GetFirstCpuHandle();
+		return mDescriptorSRV;
 	}
 
-	D3D12_CPU_DESCRIPTOR_HANDLE GetUAV()
+	DXRS::DescriptorHandle& GetUAV()
 	{
-		return mDescriptorUAV->GetFirstCpuHandle();
+		return mDescriptorUAV;
 	}
 
 private:
@@ -34,8 +35,8 @@ private:
 	DXGI_FORMAT mFormat;
 	D3D12_RESOURCE_STATES mCurrentResourceState;
 
-	U_PTR<DescriptorHeap> mDescriptorUAV;
-	U_PTR<DescriptorHeap> mDescriptorSRV;
-	U_PTR<DescriptorHeap> mDescriptorRTV;
+	DXRS::DescriptorHandle mDescriptorUAV;
+	DXRS::DescriptorHandle mDescriptorSRV;
+	DXRS::DescriptorHandle mDescriptorRTV;
 	ComPtr<ID3D12Resource> mRenderTarget;
 };

@@ -1,11 +1,12 @@
 //DirectX 12 wrapper with useful functions like device creation etc.
 
 #include "DXRSGraphics.h"
-#include "Common.h"
+#include "DescriptorHeap.h"
+
+UINT DXRSGraphics::mBackBufferIndex = 0;
 
 DXRSGraphics::DXRSGraphics(DXGI_FORMAT backBufferFormat, DXGI_FORMAT depthBufferFormat, UINT backBufferCount, D3D_FEATURE_LEVEL minFeatureLevel, unsigned int flags)
     :
-    mBackBufferIndex(0),
     mFenceValues{},
     mBackBufferFormat(backBufferFormat),
     mDepthBufferFormat(depthBufferFormat),
@@ -19,13 +20,14 @@ DXRSGraphics::DXRSGraphics(DXGI_FORMAT backBufferFormat, DXGI_FORMAT depthBuffer
     mScissorRect{},
     mOutputSize{ 0, 0, 1, 1 }
 {
-    assert(backBufferCount > MAX_BACK_BUFFER_COUNT);
-    assert(minFeatureLevel < D3D_FEATURE_LEVEL_11_0);
+    //assert(backBufferCount > MAX_BACK_BUFFER_COUNT);
+    //assert(minFeatureLevel < D3D_FEATURE_LEVEL_11_0);
 }
 
 DXRSGraphics::~DXRSGraphics()
 {
     WaitForGpu();
+    delete mDescriptorHeapManager;
 }
 
 // Configures the Direct3D device, and stores handles to it and the device context.
@@ -124,6 +126,8 @@ void DXRSGraphics::CreateResources()
     ThrowIfFailed(mDevice->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(mCommandQueue.ReleaseAndGetAddressOf())));
 
     // Create descriptor heaps for render target views and depth stencil views.
+    mDescriptorHeapManager = new DXRS::DescriptorHeapManager(mDevice.Get());
+
     D3D12_DESCRIPTOR_HEAP_DESC rtvDescriptorHeapDesc = {};
     rtvDescriptorHeapDesc.NumDescriptors = mBackBufferCount;
     rtvDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
@@ -148,8 +152,13 @@ void DXRSGraphics::CreateResources()
 
     // Create a command list for recording graphics commands.
     ThrowIfFailed(mDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, mCommandAllocators[0].Get(), nullptr, IID_PPV_ARGS(mCommandList.ReleaseAndGetAddressOf())));
-    ThrowIfFailed(mCommandList->Close());
+    
+    CreateFullscreenQuadBuffers();
 
+    ThrowIfFailed(mCommandList->Close());
+    ID3D12CommandList* ppCommandLists[] = { mCommandList.Get() };
+    mCommandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+    
     // Create a fence for tracking GPU execution progress.
     ThrowIfFailed(mDevice->CreateFence(mFenceValues[mBackBufferIndex], D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(mFence.ReleaseAndGetAddressOf())));
     mFenceValues[mBackBufferIndex]++;
@@ -159,6 +168,67 @@ void DXRSGraphics::CreateResources()
     if (!mFenceEvent.IsValid())
     {
         throw std::exception("CreateEvent");
+    }
+}
+
+void DXRSGraphics::CreateFullscreenQuadBuffers()
+{
+    {
+        struct FullscreenVertex
+        {
+            XMFLOAT4 position;
+            XMFLOAT2 uv;
+        };
+
+        // Define the geometry for a fullscreen triangle.
+        FullscreenVertex quadVertices[] =
+        {
+            { { -1.0f, -1.0f, 0.0f, 1.0f },{ 0.0f, 0.0f } },       // Bottom left.
+            { { -1.0f, 1.0f, 0.0f, 1.0f },{ 0.0f, 1.0f } },        // Top left.
+            { { 1.0f, -1.0f, 0.0f, 1.0f },{ 1.0f, 0.0f } },        // Bottom right.
+            { { 1.0f, 1.0f, 0.0f, 1.0f },{ 1.0f, 1.0f } },         // Top right.
+        };
+
+        const UINT vertexBufferSize = sizeof(quadVertices);
+
+        ThrowIfFailed(mDevice->CreateCommittedResource(
+            &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT /*D3D12_HEAP_TYPE_UPLOAD*/),
+            D3D12_HEAP_FLAG_NONE,
+            &CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSize),
+            /*D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER*/ D3D12_RESOURCE_STATE_COPY_DEST /*D3D12_RESOURCE_STATE_GENERIC_READ*/,
+            nullptr,
+            IID_PPV_ARGS(&mFullscreenQuadVertexBuffer)));
+
+        ThrowIfFailed(mDevice->CreateCommittedResource(
+            &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+            D3D12_HEAP_FLAG_NONE,
+            &CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSize),
+            D3D12_RESOURCE_STATE_GENERIC_READ,
+            nullptr,
+            IID_PPV_ARGS(&mFullscreenQuadVertexBufferUpload)));
+
+        // Copy data to the intermediate upload heap and then schedule a copy
+        // from the upload heap to the vertex buffer.
+        D3D12_SUBRESOURCE_DATA vertexData = {};
+        vertexData.pData = reinterpret_cast<BYTE*>(quadVertices);
+        vertexData.RowPitch = vertexBufferSize;
+        vertexData.SlicePitch = vertexData.RowPitch;
+
+        UpdateSubresources<1>(mCommandList.Get(), mFullscreenQuadVertexBuffer.Get(), mFullscreenQuadVertexBufferUpload.Get(), 0, 0, 1, &vertexData);
+        mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mFullscreenQuadVertexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
+
+        // Copy buffer - simple way with UPLOAD HEAP TYPE
+        //UINT8* pVertexDataBegin;
+        //CD3DX12_RANGE readRange(0, 0);
+
+        //ThrowIfFailed(mFullscreenQuadVertexBuffer->Map(0, &readRange, reinterpret_cast<void**>(&pVertexDataBegin)));
+        //memcpy(pVertexDataBegin, &quadVertices[0], vertexBufferSize);
+        //mFullscreenQuadVertexBuffer->Unmap(0, nullptr);
+
+        // Initialize the vertex buffer view.
+        mFullscreenQuadVertexBufferView.BufferLocation = mFullscreenQuadVertexBuffer->GetGPUVirtualAddress();
+        mFullscreenQuadVertexBufferView.StrideInBytes = sizeof(FullscreenVertex);
+        mFullscreenQuadVertexBufferView.SizeInBytes = sizeof(quadVertices);
     }
 }
 
