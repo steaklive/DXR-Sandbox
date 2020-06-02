@@ -3,7 +3,7 @@ Simple framework for testing DirectX Raytracing and improving DirectX12 knowledg
 
 WORK IN PROGRESS!
 
-![picture](screenshots/initial_setup.png)
+![picture](screenshots/DXRS.png)
 
 # Additional libraries
 - Assimp
