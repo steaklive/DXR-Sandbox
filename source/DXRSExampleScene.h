@@ -26,7 +26,6 @@ public:
 private:
     void Update(DXRSTimer const& timer)  /*override*/;
     void Render()                           /*override*/;
-    void CreateDragonMeshResources()            /*override*/;
     void CreateWindowResources()            /*override*/;
     void UpdateLights();
     
@@ -53,9 +52,8 @@ private:
         SeaFloor, //texture
         Count = 256
     };
-    U_PTR<BasicEffect>                                   mDragonBasicEffectXTK;
-    ComPtr<ID3D12Resource>                               mDragonTextureAlbedo;
     U_PTR<DXRSModel>                                     mDragonModel;
+    U_PTR<DXRSModel>                                     mPlaneModel;
 
     // Gbuffer
     RootSignature                                        mGbufferRS;
@@ -118,7 +116,7 @@ private:
     };
 
     float mDirectionalLightColor[4]{ 0.9, 0.9, 0.9, 1.0 };
-    float mDirectionalLightDir[4]{ 0.0, 0.0, 1.0, 1.0 };
+    float mDirectionalLightDir[4]{ 0.0, 0.707f, 0.707f, 1.0 };
     float mDirectionalLightIntensity = 1.0f;
 
     //extra constants

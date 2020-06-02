@@ -22,10 +22,11 @@ class DXRSModel
 	__declspec(align(16)) struct ModelConstantBuffer
 	{
 		XMMATRIX	World;
+		XMFLOAT4	DiffuseColor;
 	};
 
 public:
-	DXRSModel(DXRSGraphics& dxWrapper, const std::string& filename, bool flipUVs = false, XMMATRIX tranformWorld = XMMatrixIdentity());
+	DXRSModel(DXRSGraphics& dxWrapper, const std::string& filename, bool flipUVs = false, XMMATRIX tranformWorld = XMMatrixIdentity(), XMFLOAT4 color = XMFLOAT4(1, 0, 1, 1));
 	~DXRSModel();
 
 	void UpdateWorldMatrix(XMMATRIX matrix);
@@ -56,5 +57,7 @@ private:
 	std::vector<DXRSMesh*> mMeshes;
 	std::vector<DXRSModelMaterial*> mMaterials;
 	std::string mFilename;
+
+	XMFLOAT4 mDiffuseColor;
 };
 

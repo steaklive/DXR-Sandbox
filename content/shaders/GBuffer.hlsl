@@ -27,6 +27,7 @@ cbuffer GPrepassCB : register(b0)
 cbuffer perModelInstanceCB : register(b1)
 {
 	float4x4	World;
+    float4		DiffuseColor;
 };
 
 Texture2D<float4> Textures[] : register(t0);
@@ -74,7 +75,7 @@ PSOutput PSMain(PSInput input)
 	//}
 
 
-    output.colour = float4(1, 0, 0, 1);
+    output.colour = DiffuseColor;
     output.normal = float4(input.normal, 1);
     //normalize(input.normal.xyz + float3(n.xy, 0));
 

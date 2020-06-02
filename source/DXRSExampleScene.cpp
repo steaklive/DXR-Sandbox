@@ -46,11 +46,10 @@ void DXRSExampleScene::Init(HWND window, int width, int height)
     srvDesc.Texture2D.MipLevels = 1;
     device->CreateShaderResourceView(nullptr, &srvDesc, mNullDescriptor.GetCPUHandle());
 
-    //create dragon model
-    CreateDragonMeshResources();
-    mDragonModel = U_PTR<DXRSModel>(new DXRSModel(*mSandboxFramework, "C:\\Users\\Zhenya\\Documents\\GraphicsProgramming\\DXR-Sandbox\\content\\models\\dragon.fbx", true));
+    mDragonModel = U_PTR<DXRSModel>(new DXRSModel(*mSandboxFramework, "C:\\Users\\Zhenya\\Documents\\GraphicsProgramming\\DXR-Sandbox\\content\\models\\dragon.fbx", true, XMMatrixIdentity(), XMFLOAT4(0, 1, 0, 1)));
+    mPlaneModel = U_PTR<DXRSModel>(new DXRSModel(*mSandboxFramework, "C:\\Users\\Zhenya\\Documents\\GraphicsProgramming\\DXR-Sandbox\\content\\models\\plane.fbx", true, XMMatrixIdentity(), XMFLOAT4(0.5,0.2,0.6,1)));
 
-    mDepthStencil = new DXRSDepthBuffer(device, descriptorManager, width, height, DXGI_FORMAT_D32_FLOAT);
+    mDepthStencil = new DXRSDepthBuffer(device, descriptorManager, 1920, 1080, DXGI_FORMAT_D32_FLOAT);
 
     //states
     D3D12_DEPTH_STENCIL_DESC depthStateRW;
@@ -119,10 +118,10 @@ void DXRSExampleScene::Init(HWND window, int width, int height)
         DXGI_FORMAT rtFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
         D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
 
-        mGbufferRTs.push_back(new DXRSRenderTarget(device, descriptorManager, width, height, rtFormat, flags, L"Albedo"));
+        mGbufferRTs.push_back(new DXRSRenderTarget(device, descriptorManager, 1920, 1080, rtFormat, flags, L"Albedo"));
 
         rtFormat = DXGI_FORMAT_R16G16B16A16_SNORM;
-        mGbufferRTs.push_back(new DXRSRenderTarget(device, descriptorManager, width, height, rtFormat, flags, L"Normals"));
+        mGbufferRTs.push_back(new DXRSRenderTarget(device, descriptorManager, 1920, 1080, rtFormat, flags, L"Normals"));
 
         // root signature
         D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
@@ -194,8 +193,8 @@ void DXRSExampleScene::Init(HWND window, int width, int height)
     // lighting pass
     {
         //RTs
-        mLightingRTs.push_back(new DXRSRenderTarget(device, descriptorManager, width, height, DXGI_FORMAT_R11G11B10_FLOAT, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET, L"Light Diffuse"));
-        mLightingRTs.push_back(new DXRSRenderTarget(device, descriptorManager, width, height, DXGI_FORMAT_R11G11B10_FLOAT, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET, L"Light Specular"));
+        mLightingRTs.push_back(new DXRSRenderTarget(device, descriptorManager, 1920, 1080, DXGI_FORMAT_R11G11B10_FLOAT, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET, L"Light Diffuse"));
+        mLightingRTs.push_back(new DXRSRenderTarget(device, descriptorManager, 1920, 1080, DXGI_FORMAT_R11G11B10_FLOAT, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET, L"Light Specular"));
 
         //create root signature
         D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
@@ -344,8 +343,8 @@ void DXRSExampleScene::Run()
 
 void DXRSExampleScene::Update(DXRSTimer const& timer)
 {
-    Vector3 eye(0.0f, 1.0f, 1.5f);
-    Vector3 at(0.0f, 1.0f, 0.0f);
+    Vector3 eye(0.0f, 10.0f, 15.5f);
+    Vector3 at(0.0f, 0.0f, 0.0f);
 
     mView = Matrix::CreateLookAt(eye, at, Vector3::UnitY);
 
@@ -371,8 +370,11 @@ void DXRSExampleScene::Update(DXRSTimer const& timer)
     UpdateLights();
 
     //TODO map model cb
-    XMMATRIX local = mWorld * Matrix::CreateScale(0.3f, 0.3f, 0.3f) *  Matrix::CreateTranslation(0, 0, -10.0f);
+    XMMATRIX local = mWorld * Matrix::CreateScale(0.3f, 0.3f, 0.3f) *  Matrix::CreateTranslation(0, 0, 0.0f);
     mDragonModel->UpdateWorldMatrix(local);
+
+    local = mWorld * Matrix::CreateScale(8.0f, 8.0f, 8.0f) * Matrix::CreateTranslation(0, 0, 0.0f) * Matrix::CreateRotationX(-3.14f / 2.0f);
+    mPlaneModel->UpdateWorldMatrix(local);
 
     auto pad = mGamePad->GetState(0);
     if (pad.IsConnected())
@@ -464,7 +466,7 @@ void DXRSExampleScene::Render()
     };
 
     CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(mDepthStencil->GetDSV().GetCPUHandle());
-    commandList->OMSetRenderTargets(_countof(rtvHandles), rtvHandles, FALSE, &/*dsvHandle*/ mSandboxFramework->GetDepthStencilView());
+    commandList->OMSetRenderTargets(_countof(rtvHandles), rtvHandles, FALSE, &mSandboxFramework->GetDepthStencilView());
 
     const float clearColor[] = { 0.0f, 0.0f, 0.0f, 0.0f };
     const float clearNormal[] = { 0.0f, 0.0f, 0.0f, 0.0f };
@@ -488,8 +490,18 @@ void DXRSExampleScene::Render()
             gpuDescriptorHeap->AddToHandle(device, srvHandle, mNullDescriptor);
         }
     }
+    //plane
+    {
+        cbvHandle = gpuDescriptorHeap->GetHandleBlock(2);
+        gpuDescriptorHeap->AddToHandle(device, cbvHandle, mGbufferCB->GetCBV());
+        gpuDescriptorHeap->AddToHandle(device, cbvHandle, mPlaneModel->GetCB()->GetCBV());
 
-    //for (ModelInstance* modelInstance : scene->GetModelInstances())
+        commandList->SetGraphicsRootDescriptorTable(0, cbvHandle.GetGPUHandle());
+        commandList->SetGraphicsRootDescriptorTable(1, srvHandle.GetGPUHandle());
+
+        mPlaneModel->Render(commandList);
+    }
+    //dragon
     {
         cbvHandle = gpuDescriptorHeap->GetHandleBlock(2);
         gpuDescriptorHeap->AddToHandle(device, cbvHandle, mGbufferCB->GetCBV());
@@ -565,46 +577,6 @@ void DXRSExampleScene::Render()
     // Show the new frame.
     mSandboxFramework->Present();
     mGraphicsMemory->Commit(mSandboxFramework->GetCommandQueue());
-}
-
-void DXRSExampleScene::CreateDragonMeshResources()
-{
-    auto device = mSandboxFramework->GetD3DDevice();
-
-    //mResourceDescriptors = std::make_unique<DescriptorHeap>(device,
-    //    D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
-    //    D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
-    //    DragonDescriptors::Count);
-
-    //{
-    //    ResourceUploadBatch resourceUpload(device);
-
-    //    resourceUpload.Begin();
-
-    //    ThrowIfFailed(CreateDDSTextureFromFile(device, resourceUpload, L"C:\\Users\\Zhenya\\Documents\\GraphicsProgramming\\DXR-Sandbox\\content\\textures\\seafloor.dds", mDragonTextureAlbedo.ReleaseAndGetAddressOf()));
-
-    //    CreateShaderResourceView(device, mDragonTextureAlbedo.Get(), mResourceDescriptors->GetCpuHandle(DragonDescriptors::SeaFloor));
-
-    //    RenderTargetState rtState(mSandboxFramework->GetBackBufferFormat(), mSandboxFramework->GetDepthBufferFormat());
-
-    //    {
-    //        EffectPipelineStateDescription pd(
-    //            &GeometricPrimitive::VertexType::InputLayout,
-    //            CommonStates::Opaque,
-    //            CommonStates::DepthDefault,
-    //            CommonStates::CullNone,
-    //            rtState);
-
-    //        mDragonBasicEffectXTK = std::make_unique<BasicEffect>(device, EffectFlags::PerPixelLighting | EffectFlags::Texture, pd);
-    //        mDragonBasicEffectXTK->EnableDefaultLighting();
-    //        mDragonBasicEffectXTK->SetTexture(mResourceDescriptors->GetGpuHandle(DragonDescriptors::SeaFloor), mStates->AnisotropicWrap());
-    //    }
-
-    //    // Upload the resources to the GPU.
-    //    auto uploadResourcesFinished = resourceUpload.End(mSandboxFramework->GetCommandQueue());
-    //    // Wait for the upload thread to terminate
-    //    uploadResourcesFinished.wait();
-    //}
 }
 
 void DXRSExampleScene::CreateWindowResources()

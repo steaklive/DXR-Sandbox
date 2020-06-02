@@ -106,7 +106,7 @@ PSOutput PSMain(PSInput input)
 	float4 albedo = albedoBuffer[input.position.xy];
 
 	float roughness = 1.0f;
-    float metalness = 0.5f;
+    float metalness = 1.0f;
 	float3 specularColour = lerp(0.04, albedo.rgb, metalness);
 
 	float2 uv = input.position.xy * RTSize.zw;
@@ -123,7 +123,7 @@ PSOutput PSMain(PSInput input)
 	float lightIntensity = DirectionalLight.Intensity.x;
 	float NdotL = saturate(dot(normal.xyz, lightDir));
 
-    output.diffuse.rgb = (lightIntensity * (1.0 / PI) * NdotL) * lightColour * albedo.rgb;
+    output.diffuse.rgb = (lightIntensity * NdotL) * lightColour * albedo.rgb;
 	output.specular.rgb = (lightIntensity * NdotL) *  SpecularBRDF(normal.xyz, viewDir, lightDir, roughness, specularColour) * lightColour;
 
     return output;

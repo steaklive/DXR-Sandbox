@@ -2,7 +2,7 @@
 
 #include "DXRSModel.h"
 
-DXRSModel::DXRSModel(DXRSGraphics& dxWrapper, const std::string& filename, bool flipUVs, XMMATRIX transformWorld)
+DXRSModel::DXRSModel(DXRSGraphics& dxWrapper, const std::string& filename, bool flipUVs, XMMATRIX transformWorld, XMFLOAT4 color)
 	: mMeshes(), mMaterials(), mDXWrapper(dxWrapper)
 {
 	Assimp::Importer importer;
@@ -50,8 +50,10 @@ DXRSModel::DXRSModel(DXRSGraphics& dxWrapper, const std::string& filename, bool 
 
 	ModelConstantBuffer cbData = {};
 	cbData.World = transformWorld;
+	cbData.DiffuseColor = color;
 	memcpy(mBufferCB->Map(), &cbData, sizeof(cbData));
 
+	mDiffuseColor = color;
 }
 
 DXRSModel::~DXRSModel()
@@ -71,6 +73,7 @@ void DXRSModel::UpdateWorldMatrix(XMMATRIX matrix)
 {
 	ModelConstantBuffer cbData = {};
 	cbData.World = matrix;
+	cbData.DiffuseColor = mDiffuseColor;
 	memcpy(mBufferCB->Map(), &cbData, sizeof(cbData));
 }
 
