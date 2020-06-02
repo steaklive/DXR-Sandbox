@@ -54,7 +54,7 @@ public:
     inline CD3DX12_CPU_DESCRIPTOR_HANDLE GetRenderTargetView() const { return CD3DX12_CPU_DESCRIPTOR_HANDLE(mRTVDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), static_cast<INT>(mBackBufferIndex), mRTVDescriptorSize); }
     inline CD3DX12_CPU_DESCRIPTOR_HANDLE GetDepthStencilView() const { return CD3DX12_CPU_DESCRIPTOR_HANDLE(mDSVDescriptorHeap->GetCPUDescriptorHandleForHeapStart()); }
 
-    D3D12_VERTEX_BUFFER_VIEW&    GetFullscreenQuadBufferView() { return mFullscreenQuadVertexBufferView; }
+    D3D12_VERTEX_BUFFER_VIEW& GetFullscreenQuadBufferView() { return mFullscreenQuadVertexBufferView; }
 
     void ResourceBarriersBegin(std::vector<CD3DX12_RESOURCE_BARRIER>& barriers) { barriers.clear(); }
     void ResourceBarriersEnd(std::vector<CD3DX12_RESOURCE_BARRIER>& barriers, ID3D12GraphicsCommandList* commandList) {
@@ -113,6 +113,4 @@ private:
     ComPtr<ID3D12Resource>              mFullscreenQuadVertexBuffer;
     ComPtr<ID3D12Resource>              mFullscreenQuadVertexBufferUpload;
     D3D12_VERTEX_BUFFER_VIEW            mFullscreenQuadVertexBufferView;
-
-
 };

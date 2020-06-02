@@ -10,25 +10,25 @@
 #include "RootSignature.h"
 #include "PipelineStateObject.h"
 
-#define NUM_POINT_LIGHTS 15
-
-class DXRSExampleScene /*: public SandboxScene*/
+class DXRSExampleScene 
 {
 public:
 	DXRSExampleScene();
 	~DXRSExampleScene();
 
-	void Init(HWND window, int width, int height) /*override*/;
-    void Clear()                                  /*override*/;
-    void Run()                                    /*override*/;
-
+	void Init(HWND window, int width, int height);
+    void Clear();
+    void Run();
     void OnWindowSizeChanged(int width, int height);
+
 private:
-    void Update(DXRSTimer const& timer)  /*override*/;
-    void Render()                           /*override*/;
-    void CreateWindowResources()            /*override*/;
+    void Update(DXRSTimer const& timer);
+    void Render();
+    void UpdateProjectionMatrix();
     void UpdateLights();
-    
+    void UpdateControls();
+    void UpdateCamera();
+
     DXRSGraphics*   	                                 mSandboxFramework;
                                                          
 	U_PTR<GamePad>	                                     mGamePad;
@@ -41,17 +41,9 @@ private:
 
     std::vector<CD3DX12_RESOURCE_BARRIER>                mBarriers;
 
-    // DirectXTK objects.
     U_PTR<GraphicsMemory>                                mGraphicsMemory;
-    //U_PTR<DescriptorHeap>                                mResourceDescriptors;
     U_PTR<CommonStates>                                  mStates;
 
-    // Dragon
-    enum DragonDescriptors
-    {
-        SeaFloor, //texture
-        Count = 256
-    };
     U_PTR<DXRSModel>                                     mDragonModel;
     U_PTR<DXRSModel>                                     mPlaneModel;
 
@@ -106,21 +98,24 @@ private:
     };
     __declspec(align(16)) struct LightsInfoCBData
     {
-       // UINT	PointAmount;
-       // UINT	pad1;
-      //  UINT	pad2;
-      //  UINT	pad3;
-       // XMFLOAT4 SkyLight;
         DirectionalLightData DirectionalLight;
         //PointLightData PointLights[NUM_POINT_LIGHTS];
     };
 
+    // Directional light
     float mDirectionalLightColor[4]{ 0.9, 0.9, 0.9, 1.0 };
     float mDirectionalLightDir[4]{ 0.0, 0.707f, 0.707f, 1.0 };
     float mDirectionalLightIntensity = 1.0f;
 
-    //extra constants
-    Matrix                                               mWorld;
-    Matrix                                               mView;
-    Matrix                                               mProjection;
+    Matrix mWorld;
+
+    // Camera
+    XMFLOAT2 mLastMousePosition;
+    float mCameraTheta = -1.5f * XM_PI;
+    float mCameraPhi = XM_PI / 3;
+    float mCameraRadius = 25.0f;
+    Vector3 mCameraEye{ 0.0f, 0.0f, 0.0f };
+    Matrix mCamreaView;
+    Matrix mCameraProjection;
+
 };

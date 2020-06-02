@@ -31,7 +31,7 @@ void DXRSExampleScene::Init(HWND window, int width, int height)
     mGraphicsMemory = std::make_unique<GraphicsMemory>(mSandboxFramework->GetD3DDevice());
 
     mSandboxFramework->CreateWindowResources();
-    CreateWindowResources();
+    UpdateProjectionMatrix();
 
     ID3D12Device* device = mSandboxFramework->GetD3DDevice();
 
@@ -343,27 +343,24 @@ void DXRSExampleScene::Run()
 
 void DXRSExampleScene::Update(DXRSTimer const& timer)
 {
-    Vector3 eye(0.0f, 10.0f, 15.5f);
-    Vector3 at(0.0f, 0.0f, 0.0f);
-
-    mView = Matrix::CreateLookAt(eye, at, Vector3::UnitY);
+    UpdateControls();
+    UpdateCamera();
 
     mWorld = XMMatrixIdentity();
 
-    //mDragonBasicEffectXTK->SetView(mView);
     float width = mSandboxFramework->GetOutputSize().right;
     float height = mSandboxFramework->GetOutputSize().bottom;
     GBufferCBData gbufferPassData;
-    gbufferPassData.ViewProjection = mView * mProjection;
+    gbufferPassData.ViewProjection = mCamreaView * mCameraProjection;
     gbufferPassData.InvViewProjection = XMMatrixInverse(nullptr, gbufferPassData.ViewProjection);
     gbufferPassData.MipBias = 0.0f;
-    gbufferPassData.CameraPos = XMFLOAT4(eye.x,eye.y,eye.z,1);
+    gbufferPassData.CameraPos = XMFLOAT4(mCameraEye.x, mCameraEye.y, mCameraEye.z,1);
     gbufferPassData.RTSize = { width, height, 1.0f / width, 1.0f / height };
     memcpy(mGbufferCB->Map(), &gbufferPassData, sizeof(gbufferPassData));
 
     LightingCBData lightPassData = {};
     lightPassData.InvViewProjection = XMMatrixInverse(nullptr, gbufferPassData.ViewProjection);
-    lightPassData.CameraPos = XMFLOAT4(eye.x, eye.y, eye.z, 1);
+    lightPassData.CameraPos = XMFLOAT4(mCameraEye.x, mCameraEye.y, mCameraEye.z, 1);
     lightPassData.RTSize = { width, height, 1.0f / width, 1.0f / height };
     memcpy(mLightingCB->Map(), &lightPassData, sizeof(lightPassData));
 
@@ -376,31 +373,6 @@ void DXRSExampleScene::Update(DXRSTimer const& timer)
     local = mWorld * Matrix::CreateScale(8.0f, 8.0f, 8.0f) * Matrix::CreateTranslation(0, 0, 0.0f) * Matrix::CreateRotationX(-3.14f / 2.0f);
     mPlaneModel->UpdateWorldMatrix(local);
 
-    auto pad = mGamePad->GetState(0);
-    if (pad.IsConnected())
-    {
-        mGamePadButtons.Update(pad);
-
-        if (pad.IsViewPressed())
-        {
-            //ExitSample();
-        }
-    }
-    else
-    {
-        mGamePadButtons.Reset();
-    }
-
-    auto kb = mKeyboard->GetState();
-    mKeyboardButtons.Update(kb);
-
-    if (kb.Escape)
-    {
-        //ExitSample();
-    }
-
-    auto mouse = mMouse->GetState();
-    mouse;
 }
 
 void DXRSExampleScene::UpdateLights()
@@ -419,6 +391,39 @@ void DXRSExampleScene::UpdateLights()
     lightData.DirectionalLight.Intensity = dirLight.Intensity;
 
     memcpy(mLightsInfoCB->Map(), &lightData, sizeof(lightData));
+}
+
+void DXRSExampleScene::UpdateControls()
+{
+    auto mouse = mMouse->GetState();
+    if (mouse.leftButton)
+    {
+        float dx = XMConvertToRadians(0.25f * static_cast<float>(mouse.x - mLastMousePosition.x));
+        float dy = -XMConvertToRadians(0.25f * static_cast<float>(mouse.y - mLastMousePosition.y));
+
+        mCameraTheta += dx;
+        mCameraPhi += dy;
+
+        mCameraPhi = std::clamp(mCameraPhi, 0.1f, 3.14f - 0.1f);
+    }
+    mLastMousePosition.x = mouse.x;
+    mLastMousePosition.y = mouse.y;
+    mouse;
+}
+
+void DXRSExampleScene::UpdateCamera()
+{
+    float x = mCameraRadius * sinf(mCameraPhi) * cosf(mCameraTheta);
+    float y = mCameraRadius * cosf(mCameraPhi);
+    float z = mCameraRadius * sinf(mCameraPhi) * sinf(mCameraTheta);
+
+    mCameraEye.x = x;
+    mCameraEye.y = y;
+    mCameraEye.z = z;
+   
+    Vector3 at(0.0f, 0.0f, 0.0f);
+
+    mCamreaView = Matrix::CreateLookAt(mCameraEye, at, Vector3::UnitY);
 }
 
 void DXRSExampleScene::Render()
@@ -479,17 +484,19 @@ void DXRSExampleScene::Render()
 
     srvHandle = gpuDescriptorHeap->GetHandleBlock(0);
 
-    for (int i = 0; i < 1; i++)
-    {
-       //if (i < textures.size())
-       //{
-       //    gpuDescriptorHeap->AddToHandle(srvHandle, textures[i]->GetSRV());
-       //}
-       //else
-        {
+    //for (int i = 0; i < 1; i++)
+    //{
+    //   //if (i < textures.size())
+    //   //{
+    //   //    gpuDescriptorHeap->AddToHandle(srvHandle, textures[i]->GetSRV());
+    //   //}
+    //   //else
+    //    {
             gpuDescriptorHeap->AddToHandle(device, srvHandle, mNullDescriptor);
-        }
-    }
+     //   }
+    //}
+
+
     //plane
     {
         cbvHandle = gpuDescriptorHeap->GetHandleBlock(2);
@@ -579,11 +586,11 @@ void DXRSExampleScene::Render()
     mGraphicsMemory->Commit(mSandboxFramework->GetCommandQueue());
 }
 
-void DXRSExampleScene::CreateWindowResources()
+void DXRSExampleScene::UpdateProjectionMatrix()
 {
     auto size = mSandboxFramework->GetOutputSize();
     float aspectRatio = float(size.right) / float(size.bottom);
-    float fovAngleY = 70.0f * XM_PI / 180.0f;
+    float fovAngleY = 60.0f * XM_PI / 180.0f;
 
     // This is a simple example of change that can be made when the app is in
     // portrait or snapped view.
@@ -593,14 +600,12 @@ void DXRSExampleScene::CreateWindowResources()
     }
 
     // This sample makes use of a right-handed coordinate system using row-major matrices.
-    mProjection = Matrix::CreatePerspectiveFieldOfView(
+    mCameraProjection = Matrix::CreatePerspectiveFieldOfView(
         fovAngleY,
         aspectRatio,
         0.01f,
         100.0f
     );
-
-   // mDragonBasicEffectXTK->SetProjection(mProjection);
 }
 
 void DXRSExampleScene::OnWindowSizeChanged(int width, int height)
@@ -608,6 +613,6 @@ void DXRSExampleScene::OnWindowSizeChanged(int width, int height)
     if (!mSandboxFramework->WindowSizeChanged(width, height))
         return;
 
-    CreateWindowResources();
+    UpdateProjectionMatrix();
 }
 

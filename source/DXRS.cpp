@@ -59,7 +59,7 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
             return 1;
 
         // Create window
-        int w = 800, h = 600;
+        int w = 1200, h = 900;
 
         RECT rc = { 0, 0, static_cast<LONG>(w), static_cast<LONG>(h) };
 
