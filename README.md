@@ -1,5 +1,6 @@
 # DXR-Sandbox
-Very simple toy-framework for testing DirectX Raytracing and improving DirectX 12 knowledge.
+A very simple toy-framework for testing DirectX Raytracing and improving DirectX 12 knowledge.
+
 I am trying to make it as simple as I can, keeping as much as possible in one DXRSExampleScene.cpp and putting things outside of it when necessary (buffer, mesh classes, etc.) There are already too many lines there due to DX12...
 
 I have also used some helper classes from Microsoft samples (https://github.com/microsoft/DirectX-Graphics-Samples/tree/master/Samples/Desktop/D3D12Raytracing) and NVIDIA samples (https://github.com/NVIDIAGameWorks/DxrTutorials/).
