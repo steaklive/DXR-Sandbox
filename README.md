@@ -17,6 +17,8 @@ Very simple toy-framework for testing DirectX Raytracing and improving DirectX12
 - Ray Traced Shadows
 - Ray Traced Reflections
 - Ray Traced Ambient Occlusion
+- PBR support
+- ImGUI
 
 # Additional libraries
 - Assimp
