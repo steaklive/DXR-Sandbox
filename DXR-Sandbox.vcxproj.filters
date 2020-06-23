@@ -16,6 +16,18 @@
     <Filter Include="Source Files\Shaders">
       <UniqueIdentifier>{40097630-fa5f-417e-a488-a85966aa1e0c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Shaders\Raytracing">
+      <UniqueIdentifier>{fb6df612-0434-4745-826e-5dd996559201}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\External">
+      <UniqueIdentifier>{f49a3986-2627-4ab0-a4bd-e7f4f6975ed4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\External\Microsoft">
+      <UniqueIdentifier>{dc862cc8-05f7-45fe-b67e-3d0a0ba33459}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\External\NVIDIA">
+      <UniqueIdentifier>{efde4483-951f-4148-9820-a54cfc288426}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="source\Common.h">
@@ -72,6 +84,12 @@
     <ClInclude Include="source\RootSignature.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="source\RaytracingPipelineGenerator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\ShaderBindingTableGenerator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="DXR-Sandbox.rc">
@@ -115,10 +133,16 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="source\PipelineStateObject.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\External\Microsoft</Filter>
     </ClCompile>
     <ClCompile Include="source\RootSignature.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\External\Microsoft</Filter>
+    </ClCompile>
+    <ClCompile Include="source\RaytracingPipelineGenerator.cpp">
+      <Filter>Source Files\External\NVIDIA</Filter>
+    </ClCompile>
+    <ClCompile Include="source\ShaderBindingTableGenerator.cpp">
+      <Filter>Source Files\External\NVIDIA</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -130,6 +154,18 @@
     </FxCompile>
     <FxCompile Include="content\shaders\Composite.hlsl">
       <Filter>Source Files\Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="content\shaders\Common.hlsl">
+      <Filter>Source Files\Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="content\shaders\RayGen.hlsl">
+      <Filter>Source Files\Shaders\Raytracing</Filter>
+    </FxCompile>
+    <FxCompile Include="content\shaders\Miss.hlsl">
+      <Filter>Source Files\Shaders\Raytracing</Filter>
+    </FxCompile>
+    <FxCompile Include="content\shaders\Hit.hlsl">
+      <Filter>Source Files\Shaders\Raytracing</Filter>
     </FxCompile>
   </ItemGroup>
 </Project>

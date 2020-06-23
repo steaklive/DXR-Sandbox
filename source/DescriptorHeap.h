@@ -11,26 +11,26 @@ namespace DXRS
 	public:
 		DescriptorHandle()
 		{
-			m_CPUHandle.ptr = NULL;
-			m_GPUHandle.ptr = NULL;
-			m_HeapIndex = 0;
+			mCPUHandle.ptr = NULL;
+			mGPUHandle.ptr = NULL;
+			mHeapIndex = 0;
 		}
 
-		D3D12_CPU_DESCRIPTOR_HANDLE& GetCPUHandle() { return m_CPUHandle; }
-		D3D12_GPU_DESCRIPTOR_HANDLE& GetGPUHandle() { return m_GPUHandle; }
-		UINT GetHeapIndex() { return m_HeapIndex; }
+		D3D12_CPU_DESCRIPTOR_HANDLE& GetCPUHandle() { return mCPUHandle; }
+		D3D12_GPU_DESCRIPTOR_HANDLE& GetGPUHandle() { return mGPUHandle; }
+		UINT GetHeapIndex() { return mHeapIndex; }
 
-		void SetCPUHandle(D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle) { m_CPUHandle = cpuHandle; }
-		void SetGPUHandle(D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle) { m_GPUHandle = gpuHandle; }
-		void SetHeapIndex(UINT heapIndex) { m_HeapIndex = heapIndex; }
+		void SetCPUHandle(D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle) { mCPUHandle = cpuHandle; }
+		void SetGPUHandle(D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle) { mGPUHandle = gpuHandle; }
+		void SetHeapIndex(UINT heapIndex) { mHeapIndex = heapIndex; }
 
-		bool IsValid() { return m_CPUHandle.ptr != NULL; }
-		bool IsReferencedByShader() { return m_GPUHandle.ptr != NULL; }
+		bool IsValid() { return mCPUHandle.ptr != NULL; }
+		bool IsReferencedByShader() { return mGPUHandle.ptr != NULL; }
 
 	private:
-		D3D12_CPU_DESCRIPTOR_HANDLE m_CPUHandle;
-		D3D12_GPU_DESCRIPTOR_HANDLE m_GPUHandle;
-		UINT m_HeapIndex;
+		D3D12_CPU_DESCRIPTOR_HANDLE mCPUHandle;
+		D3D12_GPU_DESCRIPTOR_HANDLE mGPUHandle;
+		UINT mHeapIndex;
 	};
 
 	class DescriptorHeap
@@ -39,33 +39,33 @@ namespace DXRS
 		DescriptorHeap(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE heapType, UINT numDescriptors, bool isReferencedByShader = false);
 		virtual ~DescriptorHeap();
 
-		ID3D12DescriptorHeap* GetHeap() { return m_DescriptorHeap.Get(); }
-		D3D12_DESCRIPTOR_HEAP_TYPE GetHeapType() { return m_HeapType; }
-		D3D12_CPU_DESCRIPTOR_HANDLE GetHeapCPUStart() { return m_DescriptorHeapCPUStart; }
-		D3D12_GPU_DESCRIPTOR_HANDLE GetHeapGPUStart() { return m_DescriptorHeapGPUStart; }
-		UINT GetMaxNoofDescriptors() { return m_MaxNoofDescriptors; }
-		UINT GetDescriptorSize() { return m_DescriptorSize; }
+		ID3D12DescriptorHeap* GetHeap() { return mDescriptorHeap.Get(); }
+		D3D12_DESCRIPTOR_HEAP_TYPE GetHeapType() { return mHeapType; }
+		D3D12_CPU_DESCRIPTOR_HANDLE GetHeapCPUStart() { return mDescriptorHeapCPUStart; }
+		D3D12_GPU_DESCRIPTOR_HANDLE GetHeapGPUStart() { return mDescriptorHeapGPUStart; }
+		UINT GetMaxNoofDescriptors() { return mMaxNumDescriptors; }
+		UINT GetDescriptorSize() { return mDescriptorSize; }
 
 		void AddToHandle(ID3D12Device* device, DXRS::DescriptorHandle& destCPUHandle, DXRS::DescriptorHandle& sourceCPUHandle)
 		{
-			device->CopyDescriptorsSimple(1, destCPUHandle.GetCPUHandle(), sourceCPUHandle.GetCPUHandle(), m_HeapType);
-			destCPUHandle.GetCPUHandle().ptr += m_DescriptorSize;
+			device->CopyDescriptorsSimple(1, destCPUHandle.GetCPUHandle(), sourceCPUHandle.GetCPUHandle(), mHeapType);
+			destCPUHandle.GetCPUHandle().ptr += mDescriptorSize;
 		}
 
 		void AddToHandle(ID3D12Device* device, DXRS::DescriptorHandle& destCPUHandle, D3D12_CPU_DESCRIPTOR_HANDLE& sourceCPUHandle)
 		{
-			device->CopyDescriptorsSimple(1, destCPUHandle.GetCPUHandle(), sourceCPUHandle, m_HeapType);
-			destCPUHandle.GetCPUHandle().ptr += m_DescriptorSize;
+			device->CopyDescriptorsSimple(1, destCPUHandle.GetCPUHandle(), sourceCPUHandle, mHeapType);
+			destCPUHandle.GetCPUHandle().ptr += mDescriptorSize;
 		}
 
 	protected:
-		ComPtr<ID3D12DescriptorHeap> m_DescriptorHeap;
-		D3D12_DESCRIPTOR_HEAP_TYPE m_HeapType;
-		D3D12_CPU_DESCRIPTOR_HANDLE m_DescriptorHeapCPUStart;
-		D3D12_GPU_DESCRIPTOR_HANDLE m_DescriptorHeapGPUStart;
-		UINT m_MaxNoofDescriptors;
-		UINT m_DescriptorSize;
-		bool m_ReferencedByShader;
+		ComPtr<ID3D12DescriptorHeap> mDescriptorHeap;
+		D3D12_DESCRIPTOR_HEAP_TYPE mHeapType;
+		D3D12_CPU_DESCRIPTOR_HANDLE mDescriptorHeapCPUStart;
+		D3D12_GPU_DESCRIPTOR_HANDLE mDescriptorHeapGPUStart;
+		UINT mMaxNumDescriptors;
+		UINT mDescriptorSize;
+		bool mIsReferencedByShader;
 	};
 
 	class CPUDescriptorHeap : public DescriptorHeap
@@ -78,9 +78,9 @@ namespace DXRS
 		void FreeHandle(DescriptorHandle handle);
 
 	private:
-		std::vector<UINT> m_FreeDescriptors;
-		UINT m_CurrentDescriptorIndex;
-		UINT m_ActiveHandleCount;
+		std::vector<UINT> mFreeDescriptors;
+		UINT mCurrentDescriptorIndex;
+		UINT mActiveHandleCount;
 	};
 
 	class GPUDescriptorHeap : public DescriptorHeap
@@ -93,7 +93,7 @@ namespace DXRS
 		DescriptorHandle GetHandleBlock(UINT count);
 
 	private:
-		UINT m_CurrentDescriptorIndex;
+		UINT mCurrentDescriptorIndex;
 	};
 
 	class DescriptorHeapManager
@@ -107,12 +107,12 @@ namespace DXRS
 
 		GPUDescriptorHeap* GetGPUHeap(D3D12_DESCRIPTOR_HEAP_TYPE heapType)
 		{
-			return m_GPUDescriptorHeaps[DXRSGraphics::mBackBufferIndex][heapType];
+			return mGPUDescriptorHeaps[DXRSGraphics::mBackBufferIndex][heapType];
 		}
 
 	private:
-		CPUDescriptorHeap* m_CPUDescriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
-		GPUDescriptorHeap* m_GPUDescriptorHeaps[DXRSGraphics::MAX_BACK_BUFFER_COUNT][D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
+		CPUDescriptorHeap* mCPUDescriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
+		GPUDescriptorHeap* mGPUDescriptorHeaps[DXRSGraphics::MAX_BACK_BUFFER_COUNT][D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
 
 	};
 }

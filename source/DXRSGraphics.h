@@ -12,7 +12,13 @@ using namespace Microsoft::WRL;
 // D3D12 extension library.
 #include <d3dx12.h>
 
+#include <dxc/dxcapi.h>
+
 #include "Common.h"
+
+#include <fstream>
+#include <sstream>
+#include <string>
 
 namespace DXRS {
     class DescriptorHeapManager;
@@ -21,11 +27,13 @@ namespace DXRS {
 class DXRSGraphics
 {
 public:
-    DXRSGraphics(DXGI_FORMAT backBufferFormat = DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT depthBufferFormat = DXGI_FORMAT_D32_FLOAT, UINT backBufferCount = 2, D3D_FEATURE_LEVEL minFeatureLevel = D3D_FEATURE_LEVEL_11_0, unsigned int flags = 0);
+    DXRSGraphics(DXGI_FORMAT backBufferFormat = DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT depthBufferFormat = DXGI_FORMAT_D32_FLOAT, UINT backBufferCount = 2, D3D_FEATURE_LEVEL minFeatureLevel = D3D_FEATURE_LEVEL_12_1, unsigned int flags = 0);
     ~DXRSGraphics();
 
     void CreateResources();
+    void FinalizeResources();
     void CreateWindowResources();
+    void CreateFullscreenQuadBuffers();
     void SetWindow(HWND window, int width, int height);
     bool WindowSizeChanged(int width, int height);
     void Prepare(D3D12_RESOURCE_STATES beforeState = D3D12_RESOURCE_STATE_PRESENT);
@@ -33,6 +41,7 @@ public:
     void WaitForGpu();
 
     ID3D12Device*               GetD3DDevice() const { return mDevice.Get(); }
+    ID3D12Device5*              GetDXRDevice() const { return (ID3D12Device5*)(mDevice.Get());}
     IDXGISwapChain3*            GetSwapChain() const { return mSwapChain.Get(); }
     IDXGIFactory4*              GetDXGIFactory() const { return mDXGIFactory.Get(); }
     D3D_FEATURE_LEVEL           GetDeviceFeatureLevel() const { return mD3DFeatureLevel; }
@@ -64,6 +73,7 @@ public:
     }
 
     DXRS::DescriptorHeapManager* GetDescriptorHeapManager() { return mDescriptorHeapManager; }
+    IDxcBlob* CompileShaderLibrary(LPCWSTR fileName);
 
     static const size_t                 MAX_BACK_BUFFER_COUNT = 3;
     static UINT                         mBackBufferIndex;
@@ -74,8 +84,6 @@ private:
 
     void MoveToNextFrame();
     void GetAdapter(IDXGIAdapter1** ppAdapter);
-    void CreateFullscreenQuadBuffers();
-
     
     ComPtr<IDXGIFactory4>               mDXGIFactory;
     ComPtr<IDXGISwapChain3>             mSwapChain;

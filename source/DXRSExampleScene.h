@@ -10,6 +10,9 @@
 #include "RootSignature.h"
 #include "PipelineStateObject.h"
 
+#include "RaytracingPipelineGenerator.h"
+#include "ShaderBindingTableGenerator.h"
+
 class DXRSExampleScene 
 {
 public:
@@ -24,10 +27,17 @@ public:
 private:
     void Update(DXRSTimer const& timer);
     void Render();
-    void UpdateProjectionMatrix();
+    void SetProjectionMatrix();
     void UpdateLights();
     void UpdateControls();
     void UpdateCamera();
+
+    //raytracing methods
+    void CreateRaytracingPSO();
+    void CreateRaytracingAccelerationStructures();
+    void CreateRaytracingShaders();
+    void CreateRaytracingShaderTable();
+    void CreateRaytracingResourceHeap();
 
     DXRSGraphics*   	                                 mSandboxFramework;
                                                          
@@ -107,9 +117,26 @@ private:
     float mDirectionalLightDir[4]{ 0.0, 0.707f, 0.707f, 1.0 };
     float mDirectionalLightIntensity = 1.0f;
 
-    Matrix mWorld;
+    // Raytracing
+    IDxcBlob* mRaygenBlob;
+    IDxcBlob* mClosestHitBlob;
+    IDxcBlob* mMissBlob;
+
+    RootSignature mRaygenRS;
+    RootSignature mClosestHitRS;
+    RootSignature mMissRS;
+
+    ComPtr<ID3D12DescriptorHeap>        mRaytracingDescriptorHeap;
+    ComPtr<ID3D12StateObject>           mRaytracingPSO;
+    ComPtr<ID3D12StateObjectProperties> mRaytracingPSOProperties;
+    ComPtr<ID3D12Resource>              mRaytracingOutputResource;
+    ComPtr<ID3D12Resource>              mRaytracingShaderTableBuffer;
+    ShaderBindingTableGenerator         mRaytracingShaderBindingTableHelper;
+
+    DXRSBuffer* mTLASBuffer; // top level acceleration structure of the scene
 
     // Camera
+    ComPtr<ID3D12Resource> mCameraBuffer;
     XMFLOAT2 mLastMousePosition;
     float mCameraTheta = -1.5f * XM_PI;
     float mCameraPhi = XM_PI / 3;
@@ -118,4 +145,5 @@ private:
     Matrix mCamreaView;
     Matrix mCameraProjection;
 
+    Matrix mWorld;
 };

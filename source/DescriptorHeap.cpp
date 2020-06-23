@@ -4,26 +4,26 @@
 namespace DXRS
 {
 	DescriptorHeap::DescriptorHeap(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE heapType, UINT numDescriptors, bool isReferencedByShader)
-		: m_HeapType(heapType)
-		, m_MaxNoofDescriptors(numDescriptors)
-		, m_ReferencedByShader(isReferencedByShader)
+		: mHeapType(heapType)
+		, mMaxNumDescriptors(numDescriptors)
+		, mIsReferencedByShader(isReferencedByShader)
 	{
 		D3D12_DESCRIPTOR_HEAP_DESC heapDesc;
-		heapDesc.NumDescriptors = m_MaxNoofDescriptors;
-		heapDesc.Type = m_HeapType;
-		heapDesc.Flags = m_ReferencedByShader ? D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE : D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+		heapDesc.NumDescriptors = mMaxNumDescriptors;
+		heapDesc.Type = mHeapType;
+		heapDesc.Flags = mIsReferencedByShader ? D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE : D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 		heapDesc.NodeMask = 0;
 
-		ThrowIfFailed(device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&m_DescriptorHeap)));
+		ThrowIfFailed(device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&mDescriptorHeap)));
 
-		m_DescriptorHeapCPUStart = m_DescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+		mDescriptorHeapCPUStart = mDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 
-		if (m_ReferencedByShader)
+		if (mIsReferencedByShader)
 		{
-			m_DescriptorHeapGPUStart = m_DescriptorHeap->GetGPUDescriptorHandleForHeapStart();
+			mDescriptorHeapGPUStart = mDescriptorHeap->GetGPUDescriptorHandleForHeapStart();
 		}
 
-		m_DescriptorSize = device->GetDescriptorHandleIncrementSize(m_HeapType);
+		mDescriptorSize = device->GetDescriptorHandleIncrementSize(mHeapType);
 	}
 
 	DescriptorHeap::~DescriptorHeap()
@@ -33,28 +33,28 @@ namespace DXRS
 	CPUDescriptorHeap::CPUDescriptorHeap(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE heapType, UINT numDescriptors)
 		: DescriptorHeap(device, heapType, numDescriptors, false)
 	{
-		m_CurrentDescriptorIndex = 0;
-		m_ActiveHandleCount = 0;
+		mCurrentDescriptorIndex = 0;
+		mActiveHandleCount = 0;
 	}
 
 	CPUDescriptorHeap::~CPUDescriptorHeap()
 	{
-		m_FreeDescriptors.clear();
+		mFreeDescriptors.clear();
 	}
 
 	DescriptorHandle CPUDescriptorHeap::GetNewHandle()
 	{
 		UINT newHandleID = 0;
 
-		if (m_CurrentDescriptorIndex < m_MaxNoofDescriptors)
+		if (mCurrentDescriptorIndex < mMaxNumDescriptors)
 		{
-			newHandleID = m_CurrentDescriptorIndex;
-			m_CurrentDescriptorIndex++;
+			newHandleID = mCurrentDescriptorIndex;
+			mCurrentDescriptorIndex++;
 		}
-		else if (m_FreeDescriptors.size() > 0)
+		else if (mFreeDescriptors.size() > 0)
 		{
-			newHandleID = m_FreeDescriptors.back();
-			m_FreeDescriptors.pop_back();
+			newHandleID = mFreeDescriptors.back();
+			mFreeDescriptors.pop_back();
 		}
 		else
 		{
@@ -62,41 +62,41 @@ namespace DXRS
 		}
 
 		DescriptorHandle newHandle;
-		D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle = m_DescriptorHeapCPUStart;
-		cpuHandle.ptr += newHandleID * m_DescriptorSize;
+		D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle = mDescriptorHeapCPUStart;
+		cpuHandle.ptr += newHandleID * mDescriptorSize;
 		newHandle.SetCPUHandle(cpuHandle);
 		newHandle.SetHeapIndex(newHandleID);
-		m_ActiveHandleCount++;
+		mActiveHandleCount++;
 
 		return newHandle;
 	}
 
 	void CPUDescriptorHeap::FreeHandle(DescriptorHandle handle)
 	{
-		m_FreeDescriptors.push_back(handle.GetHeapIndex());
+		mFreeDescriptors.push_back(handle.GetHeapIndex());
 
-		if (m_ActiveHandleCount == 0)
+		if (mActiveHandleCount == 0)
 		{
 			std::exception("Freeing heap handles when there should be none left");
 		}
-		m_ActiveHandleCount--;
+		mActiveHandleCount--;
 	}
 
 	GPUDescriptorHeap::GPUDescriptorHeap(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE heapType, UINT numDescriptors)
 		: DescriptorHeap(device, heapType, numDescriptors, true)
 	{
-		m_CurrentDescriptorIndex = 0;
+		mCurrentDescriptorIndex = 0;
 	}
 
 	DescriptorHandle GPUDescriptorHeap::GetHandleBlock(UINT count)
 	{
 		UINT newHandleID = 0;
-		UINT blockEnd = m_CurrentDescriptorIndex + count;
+		UINT blockEnd = mCurrentDescriptorIndex + count;
 
-		if (blockEnd < m_MaxNoofDescriptors)
+		if (blockEnd < mMaxNumDescriptors)
 		{
-			newHandleID = m_CurrentDescriptorIndex;
-			m_CurrentDescriptorIndex = blockEnd;
+			newHandleID = mCurrentDescriptorIndex;
+			mCurrentDescriptorIndex = blockEnd;
 		}
 		else
 		{
@@ -104,12 +104,12 @@ namespace DXRS
 		}
 
 		DescriptorHandle newHandle;
-		D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle = m_DescriptorHeapCPUStart;
-		cpuHandle.ptr += newHandleID * m_DescriptorSize;
+		D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle = mDescriptorHeapCPUStart;
+		cpuHandle.ptr += newHandleID * mDescriptorSize;
 		newHandle.SetCPUHandle(cpuHandle);
 
-		D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle = m_DescriptorHeapGPUStart;
-		gpuHandle.ptr += newHandleID * m_DescriptorSize;
+		D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle = mDescriptorHeapGPUStart;
+		gpuHandle.ptr += newHandleID * mDescriptorSize;
 		newHandle.SetGPUHandle(gpuHandle);
 
 		newHandle.SetHeapIndex(newHandleID);
@@ -119,25 +119,25 @@ namespace DXRS
 
 	void GPUDescriptorHeap::Reset()
 	{
-		m_CurrentDescriptorIndex = 0;
+		mCurrentDescriptorIndex = 0;
 	}
 
 	DescriptorHeapManager::DescriptorHeapManager(ID3D12Device* device)
 	{
-		ZeroMemory(m_CPUDescriptorHeaps, sizeof(m_CPUDescriptorHeaps));
+		ZeroMemory(mCPUDescriptorHeaps, sizeof(mCPUDescriptorHeaps));
 
 		static const int MaxNoofSRVDescriptors = 4 * 4096;
 
-		m_CPUDescriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV] = new CPUDescriptorHeap(device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, MaxNoofSRVDescriptors);
-		m_CPUDescriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_RTV] = new CPUDescriptorHeap(device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 128);
-		m_CPUDescriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_DSV] = new CPUDescriptorHeap(device, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 128);
-		m_CPUDescriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER] = new CPUDescriptorHeap(device, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, 16);
+		mCPUDescriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV] = new CPUDescriptorHeap(device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, MaxNoofSRVDescriptors);
+		mCPUDescriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_RTV] = new CPUDescriptorHeap(device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 128);
+		mCPUDescriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_DSV] = new CPUDescriptorHeap(device, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 128);
+		mCPUDescriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER] = new CPUDescriptorHeap(device, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, 16);
 
 		for (UINT i = 0; i < DXRSGraphics::MAX_BACK_BUFFER_COUNT; i++)
 		{
-			ZeroMemory(m_GPUDescriptorHeaps[i], sizeof(m_GPUDescriptorHeaps[i]));
-			m_GPUDescriptorHeaps[i][D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV] = new GPUDescriptorHeap(device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, MaxNoofSRVDescriptors);
-			m_GPUDescriptorHeaps[i][D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER] = new GPUDescriptorHeap(device, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, 16);
+			ZeroMemory(mGPUDescriptorHeaps[i], sizeof(mGPUDescriptorHeaps[i]));
+			mGPUDescriptorHeaps[i][D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV] = new GPUDescriptorHeap(device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, MaxNoofSRVDescriptors);
+			mGPUDescriptorHeaps[i][D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER] = new GPUDescriptorHeap(device, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, 16);
 		}
 	}
 
@@ -145,13 +145,13 @@ namespace DXRS
 	{
 		for (int i = 0; i < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; i++)
 		{
-			if (m_CPUDescriptorHeaps[i])
-				delete m_CPUDescriptorHeaps[i];
+			if (mCPUDescriptorHeaps[i])
+				delete mCPUDescriptorHeaps[i];
 
 			for (UINT j = 0; j < DXRSGraphics::MAX_BACK_BUFFER_COUNT; j++)
 			{
-				if (m_GPUDescriptorHeaps[j][i])
-					delete m_GPUDescriptorHeaps[j][i];
+				if (mGPUDescriptorHeaps[j][i])
+					delete mGPUDescriptorHeaps[j][i];
 			}
 		}
 	}
@@ -160,13 +160,13 @@ namespace DXRS
 	{
 		const UINT currentFrame = DXRSGraphics::mBackBufferIndex;
 
-		return m_CPUDescriptorHeaps[heapType]->GetNewHandle();
+		return mCPUDescriptorHeaps[heapType]->GetNewHandle();
 	}
 
 	DescriptorHandle DescriptorHeapManager::CreateGPUHandle(D3D12_DESCRIPTOR_HEAP_TYPE heapType, UINT count)
 	{
 		const UINT currentFrame = DXRSGraphics::mBackBufferIndex;
 
-		return m_GPUDescriptorHeaps[currentFrame][heapType]->GetHandleBlock(count);
+		return mGPUDescriptorHeaps[currentFrame][heapType]->GetHandleBlock(count);
 	}
 }

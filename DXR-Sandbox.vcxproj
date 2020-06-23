@@ -107,15 +107,16 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)\external\Assimp\include;$(SolutionDir)\external\DirectXTK12\Inc;$(SolutionDir)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\external\dxc\include;$(SolutionDir)\external\Assimp\include;$(SolutionDir)\external\DirectXTK12\Inc;$(SolutionDir)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>assimp-vc140-mt.lib;d3d12.lib;dxgi.lib;dxguid.lib;d3dcompiler.lib;DirectXTK12.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>dxcompiler.lib;assimp-vc140-mt.lib;d3d12.lib;dxgi.lib;dxguid.lib;d3dcompiler.lib;DirectXTK12.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <DelayLoadDLLs>d3d12.dll</DelayLoadDLLs>
-      <AdditionalLibraryDirectories>$(SolutionDir)\external\Assimp\lib\x64\;%(AdditionalLibraryDirectories);$(SolutionDir)\external\DirectXTK12\Bin\Desktop_2017_Win10\x64\Debug</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)\external\dxc\lib;$(SolutionDir)\external\Assimp\lib\x64\;%(AdditionalLibraryDirectories);$(SolutionDir)\external\DirectXTK12\Bin\Desktop_2017_Win10\x64\Debug</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -146,17 +147,19 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)\external\Assimp\include;$(SolutionDir)\external\DirectXTK12\Inc;$(SolutionDir)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\external\dxc\include;$(SolutionDir)\external\Assimp\include;$(SolutionDir)\external\DirectXTK12\Inc;$(SolutionDir)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <CompileAsWinRT>false</CompileAsWinRT>
+      <Optimization>MaxSpeed</Optimization>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>assimp-vc140-mt.lib;d3d12.lib;dxgi.lib;dxguid.lib;d3dcompiler.lib;DirectXTK12.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>dxcompiler.lib;assimp-vc140-mt.lib;d3d12.lib;dxgi.lib;dxguid.lib;d3dcompiler.lib;DirectXTK12.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <DelayLoadDLLs>d3d12.dll</DelayLoadDLLs>
-      <AdditionalLibraryDirectories>$(SolutionDir)\external\Assimp\lib\x64\;$(SolutionDir)\external\DirectXTK12\Bin\Desktop_2017_Win10\x64\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)\external\dxc\lib;$(SolutionDir)\external\Assimp\lib\x64\;$(SolutionDir)\external\DirectXTK12\Bin\Desktop_2017_Win10\x64\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -171,11 +174,13 @@
     <ClInclude Include="source\DXRSModelMaterial.h" />
     <ClInclude Include="source\DXRSRenderTarget.h" />
     <ClInclude Include="source\PipelineStateObject.h" />
+    <ClInclude Include="source\RaytracingPipelineGenerator.h" />
     <ClInclude Include="source\Resource.h" />
     <ClInclude Include="source\DXRSScene.h" />
     <ClInclude Include="source\DXRSTimer.h" />
     <ClInclude Include="source\DXRSExampleScene.h" />
     <ClInclude Include="source\RootSignature.h" />
+    <ClInclude Include="source\ShaderBindingTableGenerator.h" />
     <ClInclude Include="source\targetver.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
@@ -197,9 +202,15 @@
     <ClCompile Include="source\DXRSExampleScene.cpp" />
     <ClCompile Include="source\DXRSRenderTarget.cpp" />
     <ClCompile Include="source\PipelineStateObject.cpp" />
+    <ClCompile Include="source\RaytracingPipelineGenerator.cpp" />
     <ClCompile Include="source\RootSignature.cpp" />
+    <ClCompile Include="source\ShaderBindingTableGenerator.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <FxCompile Include="content\shaders\Common.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </FxCompile>
     <FxCompile Include="content\shaders\Composite.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
@@ -208,7 +219,19 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>
+    <FxCompile Include="content\shaders\Hit.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </FxCompile>
     <FxCompile Include="content\shaders\Lighting.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </FxCompile>
+    <FxCompile Include="content\shaders\Miss.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </FxCompile>
+    <FxCompile Include="content\shaders\RayGen.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>

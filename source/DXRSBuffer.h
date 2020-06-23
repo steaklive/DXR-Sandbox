@@ -19,28 +19,28 @@ public:
 
 	struct Description
 	{
-		UINT m_noofElements;
+		UINT mNumElements;
 		union
 		{
-			UINT m_elementSize;
-			UINT m_size;
+			UINT mElementSize;
+			UINT mSize;
 		};
-		UINT64 m_alignment;
-		DXGI_FORMAT m_format;
-		UINT m_descriptorType;
-		D3D12_RESOURCE_FLAGS m_resourceFlags;
-		D3D12_RESOURCE_STATES m_state;
-		D3D12_HEAP_TYPE m_heapType;
+		UINT64 mAlignment;
+		DXGI_FORMAT mFormat;
+		UINT mDescriptorType;
+		D3D12_RESOURCE_FLAGS mResourceFlags;
+		D3D12_RESOURCE_STATES mState;
+		D3D12_HEAP_TYPE mHeapType;
 
 		Description() :
-			m_noofElements(1)
-			, m_elementSize(0)
-			, m_alignment(0)
-			, m_descriptorType(DXRSBuffer::DescriptorType::SRV)
-			, m_format(DXGI_FORMAT_UNKNOWN)
-			, m_resourceFlags(D3D12_RESOURCE_FLAG_NONE)
-			, m_state(D3D12_RESOURCE_STATE_COMMON)
-			, m_heapType(D3D12_HEAP_TYPE_DEFAULT)
+			mNumElements(1)
+			, mElementSize(0)
+			, mAlignment(0)
+			, mDescriptorType(DXRSBuffer::DescriptorType::SRV)
+			, mFormat(DXGI_FORMAT_UNKNOWN)
+			, mResourceFlags(D3D12_RESOURCE_FLAG_NONE)
+			, mState(D3D12_RESOURCE_STATE_COMMON)
+			, mHeapType(D3D12_HEAP_TYPE_DEFAULT)
 		{}
 	};
 
@@ -48,31 +48,31 @@ public:
 	DXRSBuffer() {}
 	virtual ~DXRSBuffer();
 
-	ID3D12Resource* GetResource() { return m_buffer.Get(); }
+	ID3D12Resource* GetResource() { return mBuffer.Get(); }
 
 	DXRS::DescriptorHandle& GetSRV() { return mDescriptorSRV; }
 	DXRS::DescriptorHandle& GetCBV() { return mDescriptorCBV; }
 
 	unsigned char* Map()
 	{
-		if (m_cbvMappedData == nullptr && m_description.m_descriptorType & DescriptorType::CBV)
+		if (mCBVMappedData == nullptr && mDescription.mDescriptorType & DescriptorType::CBV)
 		{
 			CD3DX12_RANGE readRange(0, 0);
-			ThrowIfFailed(m_buffer->Map(0, &readRange, reinterpret_cast<void**>(&m_cbvMappedData)));
+			ThrowIfFailed(mBuffer->Map(0, &readRange, reinterpret_cast<void**>(&mCBVMappedData)));
 		}
 
-		return m_cbvMappedData;
+		return mCBVMappedData;
 	}
 
 private:
-	Description m_description;
+	Description mDescription;
 
-	UINT m_bufferSize;
-	unsigned char* m_data;
-	unsigned char* m_cbvMappedData;
+	UINT mBufferSize;
+	unsigned char* mData;
+	unsigned char* mCBVMappedData;
 
-	ComPtr<ID3D12Resource> m_buffer;
-	ComPtr<ID3D12Resource> m_bufferUpload;
+	ComPtr<ID3D12Resource> mBuffer;
+	ComPtr<ID3D12Resource> mBufferUpload;
 
 	DXRS::DescriptorHandle mDescriptorCBV;
 	DXRS::DescriptorHandle mDescriptorSRV;

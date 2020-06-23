@@ -42,9 +42,9 @@ DXRSModel::DXRSModel(DXRSGraphics& dxWrapper, const std::string& filename, bool 
 	mFilename = filename;
 
 	DXRSBuffer::Description desc;
-	desc.m_elementSize = sizeof(ModelConstantBuffer);
-	desc.m_state = D3D12_RESOURCE_STATE_GENERIC_READ;
-	desc.m_descriptorType = DXRSBuffer::DescriptorType::CBV;
+	desc.mElementSize = sizeof(ModelConstantBuffer);
+	desc.mState = D3D12_RESOURCE_STATE_GENERIC_READ;
+	desc.mDescriptorType = DXRSBuffer::DescriptorType::CBV;
 
 	mBufferCB = new DXRSBuffer(dxWrapper.GetD3DDevice(), dxWrapper.GetDescriptorHeapManager(), dxWrapper.GetCommandList(), desc, L"Model CB");
 
@@ -67,10 +67,15 @@ DXRSModel::~DXRSModel()
 	{
 		delete material;
 	}
+
+	delete mBufferCB;
+	delete mBLASBuffer;
 }
 
 void DXRSModel::UpdateWorldMatrix(XMMATRIX matrix)
 {
+	mWorldMatrix = matrix;
+
 	ModelConstantBuffer cbData = {};
 	cbData.World = matrix;
 	cbData.DiffuseColor = mDiffuseColor;

@@ -44,8 +44,10 @@ public:
 	const std::string GetFileName() { return mFilename; }
 	const char* GetFileNameChar() { return mFilename.c_str(); }
 	std::vector<XMFLOAT3> GenerateAABB();
+	XMMATRIX GetWorldMatrix() { return mWorldMatrix; }
 
-
+	void SetBlasBuffer(DXRSBuffer* buffer) { mBLASBuffer = buffer; }
+	DXRSBuffer* GetBlasBuffer() { return mBLASBuffer; }
 private:
 	DXRSModel(const DXRSModel& rhs);
 	DXRSModel& operator=(const DXRSModel& rhs);
@@ -59,5 +61,7 @@ private:
 	std::string mFilename;
 
 	XMFLOAT4 mDiffuseColor;
+	DXRSBuffer* mBLASBuffer = nullptr;
+	XMMATRIX mWorldMatrix = XMMatrixIdentity();
 };
 
