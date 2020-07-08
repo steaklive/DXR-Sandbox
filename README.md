@@ -4,7 +4,7 @@ A very simple toy-framework for testing DirectX Raytracing and improving DirectX
 I have used a couple of classes from:
 - Microsoft samples (https://github.com/microsoft/DirectX-Graphics-Samples/tree/master/Samples/Desktop/D3D12Raytracing)
 - NVIDIA samples (https://github.com/NVIDIAGameWorks/DxrTutorials/) 
-and was inspired by FeaxRenderer (https://github.com/KostasAAA/FeaxRenderer)
+- and was inspired by FeaxRenderer (https://github.com/KostasAAA/FeaxRenderer)
 
 This project is not an ideal engine but just a way to test things quickly if you want to learn DXR. I am not a DX12 expert which is why some things could be done better.
 
@@ -21,12 +21,12 @@ This project is not an ideal engine but just a way to test things quickly if you
 - reflections 
 
 # TODO 
-- ~~Combine raytracing ouput with deferred lighting
+- ~~Combine raytracing ouput with deferred lighting~~
 - Ray Traced Shadows
-- ~~Ray Traced Reflections
+- ~~Ray Traced Reflections~~
 - Ray Traced Ambient Occlusion
 - PBR/texture support
-- ~~ImGUI
+- ~~ImGUI~~
 
 # Additional dependencies
 - Assimp
