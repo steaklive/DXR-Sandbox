@@ -21,7 +21,7 @@ DXRSDepthBuffer::DXRSDepthBuffer(ID3D12Device* device, DXRS::DescriptorHeapManag
 	ThrowIfFailed(device->CreateCommittedResource(
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 		D3D12_HEAP_FLAG_NONE,
-		&CD3DX12_RESOURCE_DESC::Tex2D(format, width, height, 1, 0, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL),
+		&CD3DX12_RESOURCE_DESC::Tex2D(format, width, height, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL),
 		mCurrentResourceState,
 		&depthOptimizedClearValue,
 		IID_PPV_ARGS(&mDepthStencilResource)

@@ -2,6 +2,10 @@
 
 #include "DescriptorHeap.h"
 
+#include "imgui.h"
+#include "imgui_impl_win32.h"
+#include "imgui_impl_dx12.h"
+
 D3D12_HEAP_PROPERTIES UploadHeapProps = { D3D12_HEAP_TYPE_UPLOAD, D3D12_CPU_PAGE_PROPERTY_UNKNOWN, D3D12_MEMORY_POOL_UNKNOWN, 0, 0 };
 D3D12_HEAP_PROPERTIES DefaultHeapProps = { D3D12_HEAP_TYPE_DEFAULT, D3D12_CPU_PAGE_PROPERTY_UNKNOWN, D3D12_MEMORY_POOL_UNKNOWN, 0, 0 };
 
@@ -17,8 +21,9 @@ DXRSExampleScene::~DXRSExampleScene()
 
     delete mLightingCB;
     delete mLightsInfoCB;
-
-    //delete mDepthStencil;
+    delete mGbufferCB;
+    delete mTLASBuffer;
+    delete mCameraBuffer;
 }
 
 void DXRSExampleScene::Init(HWND window, int width, int height)
@@ -33,8 +38,8 @@ void DXRSExampleScene::Init(HWND window, int width, int height)
     mSandboxFramework->CreateResources();
     mSandboxFramework->CreateFullscreenQuadBuffers();
 
-    mDragonModel = U_PTR<DXRSModel>(new DXRSModel(*mSandboxFramework, "C:\\Users\\Zhenya\\Documents\\GraphicsProgramming\\DXR-Sandbox\\content\\models\\dragon.fbx", true, XMMatrixIdentity(), XMFLOAT4(0, 1, 0, 1)));
-    mPlaneModel = U_PTR<DXRSModel>(new DXRSModel(*mSandboxFramework, "C:\\Users\\Zhenya\\Documents\\GraphicsProgramming\\DXR-Sandbox\\content\\models\\plane.fbx", true, XMMatrixIdentity(), XMFLOAT4(0.5,0.2,0.6,1)));
+    mDragonModel = U_PTR<DXRSModel>(new DXRSModel(*mSandboxFramework, mSandboxFramework->GetFilePath("content\\models\\dragon.fbx"), true, XMMatrixIdentity(), XMFLOAT4(0, 1, 0, 0))); //storing reflectivity in w of color
+    mPlaneModel = U_PTR<DXRSModel>(new DXRSModel(*mSandboxFramework, mSandboxFramework->GetFilePath("content\\models\\plane.fbx"), true, XMMatrixIdentity(), XMFLOAT4(0.2, 0.2, 0.2, 0.15))); //storing reflectivity in w of color
 
     CreateRaytracingAccelerationStructures();
     CreateRaytracingShaders();
@@ -43,54 +48,57 @@ void DXRSExampleScene::Init(HWND window, int width, int height)
     mSandboxFramework->FinalizeResources();
     ID3D12Device* device = mSandboxFramework->GetD3DDevice();
 
-    //RT output buffer
-    D3D12_RESOURCE_DESC resDesc = {};
-    resDesc.DepthOrArraySize = 1;
-    resDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-    resDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-    resDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-    resDesc.Width = 1920;
-    resDesc.Height = 1080;
-    resDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
-    resDesc.MipLevels = 1;
-    resDesc.SampleDesc.Count = 1;
-    ThrowIfFailed(device->CreateCommittedResource(&DefaultHeapProps, D3D12_HEAP_FLAG_NONE, &resDesc,D3D12_RESOURCE_STATE_COPY_SOURCE, nullptr, IID_PPV_ARGS(&mRaytracingOutputResource)));
-
-    //camera buffer
-    D3D12_RESOURCE_DESC cambufDesc = {};
-    cambufDesc.Alignment = 0;
-    cambufDesc.DepthOrArraySize = 1;
-    cambufDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-    cambufDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
-    cambufDesc.Format = DXGI_FORMAT_UNKNOWN;
-    cambufDesc.Height = 1;
-    cambufDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-    cambufDesc.MipLevels = 1;
-    cambufDesc.SampleDesc.Count = 1;
-    cambufDesc.SampleDesc.Quality = 0;
-    cambufDesc.Width = 4 * sizeof(XMMATRIX);
-    ThrowIfFailed(device->CreateCommittedResource(&UploadHeapProps, D3D12_HEAP_FLAG_NONE, &cambufDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&mCameraBuffer)));
-
-    CreateRaytracingResourceHeap();
-    CreateRaytracingShaderTable();
-
     mStates = std::make_unique<CommonStates>(device);
     mGraphicsMemory = std::make_unique<GraphicsMemory>(device);
 
     mSandboxFramework->CreateWindowResources();
     SetProjectionMatrix();
 
-    // create a null descriptor for unbound textures
     auto descriptorManager = mSandboxFramework->GetDescriptorHeapManager();
+    
+    #pragma region ImGui
+
+    // Setup Dear ImGui context
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+
+    // Setup Dear ImGui style
+    ImGui::StyleColorsDark();
+    //ImGui::StyleColorsClassic();
+
+    // Setup Platform/Renderer bindings
+    ImGui_ImplWin32_Init(window);
+
+    D3D12_DESCRIPTOR_HEAP_DESC desc = {};
+    desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+    desc.NumDescriptors = 1;
+    desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+
+    ThrowIfFailed(device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&mUIDescriptorHeap)));
+    ImGui_ImplDX12_Init(device, 3, DXGI_FORMAT_R8G8B8A8_UNORM, mUIDescriptorHeap.Get(), mUIDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), mUIDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
+
+#pragma endregion
+
+    // init camera CB
+    DXRSBuffer::Description cbDescDXR;
+    cbDescDXR.mElementSize = sizeof(CameraBuffer);
+    cbDescDXR.mState = D3D12_RESOURCE_STATE_GENERIC_READ;
+    cbDescDXR.mDescriptorType = DXRSBuffer::DescriptorType::CBV;
+    mCameraBuffer = new DXRSBuffer(mSandboxFramework->GetD3DDevice(), descriptorManager, mSandboxFramework->GetCommandList(), cbDescDXR, L"DXR CB");
+
+    // create a null descriptor for unbound textures
     mNullDescriptor = descriptorManager->CreateCPUHandle(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
+    // DS buffer
     D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
     srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
     srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
     srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
     srvDesc.Texture2D.MipLevels = 1;
     device->CreateShaderResourceView(nullptr, &srvDesc, mNullDescriptor.GetCPUHandle());
-
     mDepthStencil = new DXRSDepthBuffer(device, descriptorManager, 1920, 1080, DXGI_FORMAT_D32_FLOAT);
 
     #pragma region States
@@ -192,11 +200,11 @@ void DXRSExampleScene::Init(HWND window, int width, int height)
 
         ID3DBlob* errorBlob = nullptr;
 
-        ThrowIfFailed(D3DCompileFromFile(L"C:\\Users\\Zhenya\\Documents\\GraphicsProgramming\\DXR-Sandbox\\content\\shaders\\GBuffer.hlsl", nullptr, nullptr, "VSMain", "vs_5_1", compileFlags, 0, &vertexShader, nullptr));
+        ThrowIfFailed(D3DCompileFromFile(mSandboxFramework->GetFilePath(L"content\\shaders\\GBuffer.hlsl").c_str(), nullptr, nullptr, "VSMain", "vs_5_1", compileFlags, 0, &vertexShader, nullptr));
 
         compileFlags |= D3DCOMPILE_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES;
 
-        ThrowIfFailed(D3DCompileFromFile(L"C:\\Users\\Zhenya\\Documents\\GraphicsProgramming\\DXR-Sandbox\\content\\shaders\\GBuffer.hlsl", nullptr, nullptr, "PSMain", "ps_5_1", compileFlags, 0, &pixelShader, &errorBlob));
+        ThrowIfFailed(D3DCompileFromFile(mSandboxFramework->GetFilePath(L"content\\shaders\\GBuffer.hlsl").c_str(), nullptr, nullptr, "PSMain", "ps_5_1", compileFlags, 0, &pixelShader, &errorBlob));
 
         // Define the vertex input layout.
         D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
@@ -236,8 +244,8 @@ void DXRSExampleScene::Init(HWND window, int width, int height)
     // create resources lighting pass
     {
         //RTs
-        mLightingRTs.push_back(new DXRSRenderTarget(device, descriptorManager, 1920, 1080, DXGI_FORMAT_R11G11B10_FLOAT, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET, L"Light Diffuse"));
-        mLightingRTs.push_back(new DXRSRenderTarget(device, descriptorManager, 1920, 1080, DXGI_FORMAT_R11G11B10_FLOAT, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET, L"Light Specular"));
+        mLightingRTs.push_back(new DXRSRenderTarget(device, descriptorManager, 1920, 1080, DXGI_FORMAT_R11G11B10_FLOAT, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, L"Light Diffuse"));
+        mLightingRTs.push_back(new DXRSRenderTarget(device, descriptorManager, 1920, 1080, DXGI_FORMAT_R11G11B10_FLOAT, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, L"Light Specular"));
 
         //create root signature
         D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
@@ -270,14 +278,14 @@ void DXRSExampleScene::Init(HWND window, int width, int height)
 #endif
         ID3DBlob* errorBlob = nullptr;
 
-        ThrowIfFailed(D3DCompileFromFile(L"C:\\Users\\Zhenya\\Documents\\GraphicsProgramming\\DXR-Sandbox\\content\\shaders\\Lighting.hlsl", nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "VSMain", "vs_5_0", compileFlags, 0, &vertexShader, &errorBlob));
+        ThrowIfFailed(D3DCompileFromFile(mSandboxFramework->GetFilePath(L"content\\shaders\\Lighting.hlsl").c_str(), nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "VSMain", "vs_5_0", compileFlags, 0, &vertexShader, &errorBlob));
         if (errorBlob)
         {
             OutputDebugStringA((char*)errorBlob->GetBufferPointer());
             errorBlob->Release();
         }
 
-        ThrowIfFailed(D3DCompileFromFile(L"C:\\Users\\Zhenya\\Documents\\GraphicsProgramming\\DXR-Sandbox\\content\\shaders\\Lighting.hlsl", nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "PSMain", "ps_5_0", compileFlags, 0, &pixelShader, &errorBlob));
+        ThrowIfFailed(D3DCompileFromFile(mSandboxFramework->GetFilePath(L"content\\shaders\\Lighting.hlsl").c_str(), nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "PSMain", "ps_5_0", compileFlags, 0, &pixelShader, &errorBlob));
         if (errorBlob)
         {
             OutputDebugStringA((char*)errorBlob->GetBufferPointer());
@@ -338,14 +346,14 @@ void DXRSExampleScene::Init(HWND window, int width, int height)
 #endif
         ID3DBlob* errorBlob = nullptr;
 
-        ThrowIfFailed(D3DCompileFromFile(L"C:\\Users\\Zhenya\\Documents\\GraphicsProgramming\\DXR-Sandbox\\content\\shaders\\Composite.hlsl", nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "VSMain", "vs_5_0", compileFlags, 0, &vertexShader, &errorBlob));
+        ThrowIfFailed(D3DCompileFromFile(mSandboxFramework->GetFilePath(L"content\\shaders\\Composite.hlsl").c_str(), nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "VSMain", "vs_5_0", compileFlags, 0, &vertexShader, &errorBlob));
         if (errorBlob)
         {
             OutputDebugStringA((char*)errorBlob->GetBufferPointer());
             errorBlob->Release();
         }
 
-        ThrowIfFailed(D3DCompileFromFile(L"C:\\Users\\Zhenya\\Documents\\GraphicsProgramming\\DXR-Sandbox\\content\\shaders\\Composite.hlsl", nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "PSMain", "ps_5_0", compileFlags, 0, &pixelShader, &errorBlob));
+        ThrowIfFailed(D3DCompileFromFile(mSandboxFramework->GetFilePath(L"content\\shaders\\Composite.hlsl").c_str(), nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "PSMain", "ps_5_0", compileFlags, 0, &pixelShader, &errorBlob));
 
         mCompositePSO = mLightingPSO;
 
@@ -356,6 +364,8 @@ void DXRSExampleScene::Init(HWND window, int width, int height)
         mCompositePSO.Finalize(device);
     }
 
+    CreateRaytracingResourceHeap();
+    CreateRaytracingShaderTable();
 }
 
 void DXRSExampleScene::Clear()
@@ -390,18 +400,31 @@ void DXRSExampleScene::CreateRaytracingPSO()
     ID3D12Device5* device = mSandboxFramework->GetDXRDevice();
     RayTracingPipelineGenerator pipeline(device);
 
+    CD3DX12_ROOT_PARAMETER1 globalRootSignatureParameters[2];
+    globalRootSignatureParameters[0].InitAsConstantBufferView(0); // camera buffer
+    globalRootSignatureParameters[1].InitAsConstantBufferView(1); // light buffer
+    auto globalRootSignatureDesc = CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC(ARRAYSIZE(globalRootSignatureParameters), globalRootSignatureParameters);
+
+    ComPtr<ID3DBlob> pGlobalRootSignatureBlob;
+    ComPtr<ID3DBlob> pErrorBlob;
+    if (FAILED(D3D12SerializeVersionedRootSignature(&globalRootSignatureDesc, &pGlobalRootSignatureBlob, &pErrorBlob)))
+        OutputDebugStringA((LPCSTR)pErrorBlob->GetBufferPointer());
+    device->CreateRootSignature(0, pGlobalRootSignatureBlob->GetBufferPointer(), pGlobalRootSignatureBlob->GetBufferSize(), IID_PPV_ARGS(&mGlobalRaytracingRootSignature));
+    mGlobalRaytracingRootSignature->SetName(L"Global RS");
+
+    pipeline.SetGlobalRootSignature(mGlobalRaytracingRootSignature.Get());
+
     pipeline.AddLibrary(mRaygenBlob, { L"RayGen" });
     pipeline.AddLibrary(mMissBlob, { L"Miss" });
-    pipeline.AddLibrary(mClosestHitBlob, { L"ClosestHitObject", L"ClosestHitPlane" });
-    
-    pipeline.AddHitGroup(L"PlaneHitGroup", L"ClosestHitPlane");
-    pipeline.AddHitGroup(L"HitGroup", L"ClosestHitObject");
+    pipeline.AddLibrary(mClosestHitBlob, { L"ClosestHit" });
+
+    pipeline.AddHitGroup(L"HitGroup", L"ClosestHit");
     
     pipeline.AddRootSignatureAssociation(mRaygenRS.GetSignature(), { L"RayGen" });
     pipeline.AddRootSignatureAssociation(mMissRS.GetSignature(), { L"Miss" });
-    pipeline.AddRootSignatureAssociation(mClosestHitRS.GetSignature(), { L"PlaneHitGroup" , L"HitGroup" });
+    pipeline.AddRootSignatureAssociation(mClosestHitRS.GetSignature(), { L"HitGroup" });
     
-    pipeline.SetMaxPayloadSize(sizeof(XMFLOAT4)); // RGB + distance
+    pipeline.SetMaxPayloadSize(/*sizeof(XMFLOAT4)*/ 8);
     pipeline.SetMaxAttributeSize(sizeof(XMFLOAT2)); // barycentric coordinates
     pipeline.SetMaxRecursionDepth(1);
     
@@ -410,8 +433,7 @@ void DXRSExampleScene::CreateRaytracingPSO()
     
     // Cast the state object into a properties object, allowing to later access
     // the shader pointers by name
-    ThrowIfFailed(
-        mRaytracingPSO->QueryInterface(IID_PPV_ARGS(&mRaytracingPSOProperties)));
+    ThrowIfFailed(mRaytracingPSO->QueryInterface(IID_PPV_ARGS(&mRaytracingPSOProperties)));
 }
 
 void DXRSExampleScene::CreateRaytracingAccelerationStructures()
@@ -421,73 +443,6 @@ void DXRSExampleScene::CreateRaytracingAccelerationStructures()
 
     //Create BLAS
     {
-        //plane mesh
-        {
-            DXRSMesh* mesh = mPlaneModel->Meshes()[0];
-
-            D3D12_RAYTRACING_GEOMETRY_DESC desc;
-            desc.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
-            desc.Triangles.VertexBuffer.StartAddress = mesh->GetVertexBuffer()->GetGPUVirtualAddress();
-            desc.Triangles.VertexBuffer.StrideInBytes = mesh->GetVertexBufferView().StrideInBytes;
-            desc.Triangles.VertexCount = static_cast<UINT>(mesh->Vertices().size());
-            desc.Triangles.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT;
-            desc.Triangles.IndexBuffer = mesh->GetIndexBuffer()->GetGPUVirtualAddress();
-            desc.Triangles.IndexFormat = mesh->GetIndexBufferView().Format;
-            desc.Triangles.IndexCount = static_cast<UINT>(mesh->Indices().size());
-            desc.Triangles.Transform3x4 = 0;
-            desc.Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
-
-            D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS buildFlags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE;
-
-            // Get the size requirements for the BLAS buffers
-            D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS ASInputs = {};
-            ASInputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
-            ASInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
-            ASInputs.pGeometryDescs = &desc;
-            ASInputs.NumDescs = 1;
-            ASInputs.Flags = buildFlags;
-
-            D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO ASPreBuildInfo = {};
-            device->GetRaytracingAccelerationStructurePrebuildInfo(&ASInputs, &ASPreBuildInfo);
-
-            ASPreBuildInfo.ScratchDataSizeInBytes = Align(ASPreBuildInfo.ScratchDataSizeInBytes, D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT);
-            ASPreBuildInfo.ResultDataMaxSizeInBytes = Align(ASPreBuildInfo.ResultDataMaxSizeInBytes, D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT);
-
-            // Create the BLAS scratch buffer
-            DXRSBuffer::Description blasdesc;
-            blasdesc.mAlignment = std::max(D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT, D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT);
-            blasdesc.mSize = (UINT)ASPreBuildInfo.ScratchDataSizeInBytes;
-            blasdesc.mState = D3D12_RESOURCE_STATE_COMMON;
-            blasdesc.mDescriptorType = DXRSBuffer::DescriptorType::Raw;
-            blasdesc.mResourceFlags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-
-            DXRSBuffer* blasScratchBuffer = new DXRSBuffer(device, mSandboxFramework->GetDescriptorHeapManager(), commandList, blasdesc, L"BLAS Scratch Buffer");
-
-            // Create the BLAS buffer
-            blasdesc.mElementSize = (UINT)ASPreBuildInfo.ResultDataMaxSizeInBytes;
-            blasdesc.mState = D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE;
-
-            DXRSBuffer* blasBuffer = new DXRSBuffer(device, mSandboxFramework->GetDescriptorHeapManager(), commandList, blasdesc, L"BLAS Buffer");
-
-            // Describe and build the bottom level acceleration structure
-            D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC buildDesc = {};
-            buildDesc.Inputs = ASInputs;
-            buildDesc.ScratchAccelerationStructureData = blasScratchBuffer->GetResource()->GetGPUVirtualAddress();
-            buildDesc.DestAccelerationStructureData = blasBuffer->GetResource()->GetGPUVirtualAddress();
-
-            commandList->BuildRaytracingAccelerationStructure(&buildDesc, 0, nullptr);
-
-            // Wait for the BLAS build to complete
-            D3D12_RESOURCE_BARRIER uavBarrier;
-            uavBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
-            uavBarrier.UAV.pResource = blasBuffer->GetResource();
-            uavBarrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-            commandList->ResourceBarrier(1, &uavBarrier);
-
-            mPlaneModel->SetBlasBuffer(blasBuffer);
-
-            //delete blasScratchBuffer;
-        }
         //dragon mesh
         {
             DXRSMesh* mesh = mDragonModel->Meshes()[0];
@@ -561,22 +516,7 @@ void DXRSExampleScene::CreateRaytracingAccelerationStructures()
     {
         D3D12_RAYTRACING_INSTANCE_DESC* instanceDescriptions = new D3D12_RAYTRACING_INSTANCE_DESC[2]; //plane and dragon
         int noofInstances = 0;
-        //plane
-        {
 
-            D3D12_RAYTRACING_INSTANCE_DESC& instanceDesc = instanceDescriptions[noofInstances];
-            // Describe the TLAS geometry instance(s)
-            instanceDesc.InstanceID = noofInstances;// This value is exposed to shaders as SV_InstanceID
-            instanceDesc.InstanceContributionToHitGroupIndex = 0;
-            instanceDesc.InstanceMask = 0xFF;
-
-            DirectX::XMMATRIX m = XMMatrixTranspose(mWorld * Matrix::CreateScale(8.0f, 8.0f, 8.0f) * Matrix::CreateTranslation(0, 0, 0.0f) * Matrix::CreateRotationX(-3.14f / 2.0f));
-            memcpy(instanceDesc.Transform, &m, sizeof(instanceDesc.Transform));
-
-            instanceDesc.Flags = D3D12_RAYTRACING_INSTANCE_FLAG_NONE;
-            instanceDesc.AccelerationStructure = mPlaneModel->GetBlasBuffer()->GetResource()->GetGPUVirtualAddress();
-            noofInstances++;
-        }
         //dragon
         {
 
@@ -668,32 +608,37 @@ void DXRSExampleScene::CreateRaytracingShaders()
 
     //compile raygen shader
     {
-        mRaygenBlob = mSandboxFramework->CompileShaderLibrary(L"C:\\Users\\Zhenya\\Documents\\GraphicsProgramming\\DXR-Sandbox\\content\\shaders\\RayGen.hlsl");
+        mRaygenBlob = mSandboxFramework->CompileShaderLibrary(mSandboxFramework->GetFilePath(L"content\\shaders\\RayGen.hlsl").c_str());
 
         // create root signature
         mRaygenRS.Reset(1, 0);
-        mRaygenRS[0].InitAsDescriptorTable(3);
+        mRaygenRS[0].InitAsDescriptorTable(2);
         mRaygenRS[0].SetTableRange(0, D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 0, 1, 0);
-        mRaygenRS[0].SetTableRange(1, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 1, 0);
-        mRaygenRS[0].SetTableRange(2, D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 0, 1, 0);
+        mRaygenRS[0].SetTableRange(1, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 4, 0);
         mRaygenRS.Finalize(device, L"Raygen RS", rootSignatureFlags);
     }
 
     //compile hit shader
     {
-        mClosestHitBlob = mSandboxFramework->CompileShaderLibrary(L"C:\\Users\\Zhenya\\Documents\\GraphicsProgramming\\DXR-Sandbox\\content\\shaders\\Hit.hlsl");
+        mClosestHitBlob = mSandboxFramework->CompileShaderLibrary(mSandboxFramework->GetFilePath(L"content\\shaders\\Hit.hlsl").c_str());
 
         // create root signature
         mClosestHitRS.Reset(1, 0);
-        mClosestHitRS[0].InitAsBufferSRV(0);
-        mRaygenRS.Finalize(device, L"Closest Hit RS", rootSignatureFlags);
+        mClosestHitRS[0].InitAsDescriptorTable(3);
+        mClosestHitRS[0].SetTableRange(0, D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 0, 1, 0);
+        mClosestHitRS[0].SetTableRange(1, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 6, 0);
+        mClosestHitRS[0].SetTableRange(2, D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 2, 1, 0);
+
+        mClosestHitRS.Finalize(device, L"Closest Hit RS", rootSignatureFlags);
     }
 
     //compile miss shader
     {
-        mMissBlob = mSandboxFramework->CompileShaderLibrary(L"C:\\Users\\Zhenya\\Documents\\GraphicsProgramming\\DXR-Sandbox\\content\\shaders\\Miss.hlsl");
+        mMissBlob = mSandboxFramework->CompileShaderLibrary(mSandboxFramework->GetFilePath(L"content\\shaders\\Miss.hlsl").c_str());
         
-        mMissRS.Reset(0, 0);
+        mMissRS.Reset(1, 0);
+        mMissRS[0].InitAsDescriptorTable(1);
+        mMissRS[0].SetTableRange(0, D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 0, 1, 0);
         mMissRS.Finalize(device, L"Miss RS", rootSignatureFlags);
     }
 }
@@ -706,8 +651,7 @@ void DXRSExampleScene::CreateRaytracingShaderTable()
     // times, the helper must be emptied before re-adding shaders.
     mRaytracingShaderBindingTableHelper.Reset();
 
-    // The pointer to the beginning of the heap is the only parameter required by
-    // shaders without root parameters
+    // The pointer to the beginning of the heap is the only parameter required by shaders without root parameters
     D3D12_GPU_DESCRIPTOR_HANDLE srvUavHeapHandle = mRaytracingDescriptorHeap->GetGPUDescriptorHandleForHeapStart() /*GetHeapGPUStart()*/;
     
     // The helper treats both root parameter pointers and heap pointers as void*,
@@ -716,16 +660,10 @@ void DXRSExampleScene::CreateRaytracingShaderTable()
     // struct is a UINT64, which then has to be reinterpreted as a pointer.
     auto heapPointer = reinterpret_cast<UINT64*>(srvUavHeapHandle.ptr);
     
-    // The ray generation only uses heap data
     mRaytracingShaderBindingTableHelper.AddRayGenerationProgram(L"RayGen", { heapPointer });
-    
-    // The miss and hit shaders do not access any external resources: instead they
-    // communicate their results through the ray payload
-    mRaytracingShaderBindingTableHelper.AddMissProgram(L"Miss", {});
-    
-    // Adding the mesh hit shader
-    mRaytracingShaderBindingTableHelper.AddHitGroup(L"PlaneHitGroup", { (void*)(mPlaneModel->Meshes()[0]->GetVertexBuffer()) });
-    mRaytracingShaderBindingTableHelper.AddHitGroup(L"HitGroup", { (void*)(mDragonModel->Meshes()[0]->GetVertexBuffer()) });
+    mRaytracingShaderBindingTableHelper.AddMissProgram(L"Miss", { heapPointer });
+    mRaytracingShaderBindingTableHelper.AddHitGroup(L"HitGroup", { heapPointer, (void*)(mPlaneModel->Meshes()[0]->GetVertexBuffer())});
+    mRaytracingShaderBindingTableHelper.AddHitGroup(L"HitGroup", { heapPointer, (void*)(mDragonModel->Meshes()[0]->GetVertexBuffer())});
     
     // Compute the size of the SBT given the number of shaders and their
     // parameters
@@ -755,12 +693,17 @@ void DXRSExampleScene::CreateRaytracingResourceHeap()
     auto device = mSandboxFramework->GetD3DDevice();
     auto descriptorHeapManager = mSandboxFramework->GetDescriptorHeapManager();
 
-    // Create a SRV/UAV/CBV descriptor heap. We need 3 entries
+    // Create a SRV/UAV/CBV descriptor heap. We need 8 entries
     // 1 - UAV for the RT output
     // 1 - SRV for the TLAS
-    // 1 - for CBV 
+    // 1 - SRV for normals
+    // 1 - SRV for depth
+    // 1 - SRV for albedo
+    // 1 - SRV for mesh indices
+    // 1 - SRV for mesh vertices
+    // 1 - CBV for mesh info
     D3D12_DESCRIPTOR_HEAP_DESC desc = {};
-    desc.NumDescriptors = 3;
+    desc.NumDescriptors = 8;
     desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
     desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
     ThrowIfFailed(device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&mRaytracingDescriptorHeap)));
@@ -769,16 +712,11 @@ void DXRSExampleScene::CreateRaytracingResourceHeap()
     // descriptors directly
     D3D12_CPU_DESCRIPTOR_HANDLE srvHandle = mRaytracingDescriptorHeap->GetCPUDescriptorHandleForHeapStart()/*GetHeapCPUStart()*/;
 
-    // Create the UAV. Based on the root signature we created it is the first
-    // entry. The Create*View methods write the view information directly into
-    // srvHandle
-    D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
-    uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
-    device->CreateUnorderedAccessView(mRaytracingOutputResource.Get(), nullptr, &uavDesc, srvHandle);
+    // UAV
+    device->CopyDescriptorsSimple(1, srvHandle, mLightingRTs[0]->GetUAV().GetCPUHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
-    // Add the Top Level AS SRV right after the raytracing output buffer
+    // Add for TLAS SRV
     srvHandle.ptr += device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-
     D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc;
     srvDesc.Format = DXGI_FORMAT_UNKNOWN;
     srvDesc.ViewDimension = D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE;
@@ -787,13 +725,34 @@ void DXRSExampleScene::CreateRaytracingResourceHeap()
     // Write the acceleration structure view in the heap
     device->CreateShaderResourceView(nullptr, &srvDesc, srvHandle);
 
-    // Add for CBV
+    // Add for normals texture SRV
     srvHandle.ptr += device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-    // Describe and create a constant buffer view for the camera
-    D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
-    cbvDesc.BufferLocation = mCameraBuffer->GetGPUVirtualAddress();
-    cbvDesc.SizeInBytes = 4 * sizeof(XMMATRIX);
-    device->CreateConstantBufferView(&cbvDesc, srvHandle);
+    device->CopyDescriptorsSimple(1, srvHandle, mGbufferRTs[1]->GetSRV().GetCPUHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+    
+    // Add for depth texture SRV
+    srvHandle.ptr += device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+    device->CopyDescriptorsSimple(1, srvHandle, mDepthStencil->GetSRV().GetCPUHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+    // Add for albedo texture SRV
+    srvHandle.ptr += device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+    device->CopyDescriptorsSimple(1, srvHandle, mGbufferRTs[0]->GetSRV().GetCPUHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+    //*******//
+    // for simplicity the rest is hardcoded for one mesh - dragon model
+    //*******//
+
+    // Add for indices buffer SRV
+    srvHandle.ptr += device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+    device->CopyDescriptorsSimple(1, srvHandle, mDragonModel->Meshes()[0]->GetIndexBufferSRV().GetCPUHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+    // Add for vertex buffer SRV
+    srvHandle.ptr += device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+    device->CopyDescriptorsSimple(1, srvHandle, mDragonModel->Meshes()[0]->GetVertexBufferSRV().GetCPUHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+    // Add for mesh info buffer CBV
+    srvHandle.ptr += device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+    device->CopyDescriptorsSimple(1, srvHandle,  mDragonModel->Meshes()[0]->GetMeshInfoBuffer()->GetCBV().GetCPUHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
 }
 
 void DXRSExampleScene::Render()
@@ -809,17 +768,144 @@ void DXRSExampleScene::Render()
     auto device = mSandboxFramework->GetD3DDevice();
     auto descriptorHeapManager = mSandboxFramework->GetDescriptorHeapManager();
 
-    //DXR dispatch
+    DXRS::GPUDescriptorHeap* gpuDescriptorHeap = descriptorHeapManager->GetGPUHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+    gpuDescriptorHeap->Reset();
+
+    ID3D12DescriptorHeap* ppHeaps[] = { gpuDescriptorHeap->GetHeap() };
+    commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+
+    CD3DX12_VIEWPORT viewport = CD3DX12_VIEWPORT(0.0f, 0.0f, mSandboxFramework->GetOutputSize().right, mSandboxFramework->GetOutputSize().bottom);
+    CD3DX12_RECT rect = CD3DX12_RECT(0.0f, 0.0f, mSandboxFramework->GetOutputSize().right, mSandboxFramework->GetOutputSize().bottom);
+    commandList->RSSetViewports(1, &viewport);
+    commandList->RSSetScissorRects(1, &rect);
+
+    //gbuffer
+    {
+        commandList->SetPipelineState(mGbufferPSO.GetPipelineStateObject());
+        commandList->SetGraphicsRootSignature(mGbufferRS.GetSignature());
+
+        //transition buffers to rendertarget outputs
+        mSandboxFramework->ResourceBarriersBegin(mBarriers);
+        mGbufferRTs[0]->TransitionTo(mBarriers, commandList, D3D12_RESOURCE_STATE_RENDER_TARGET);
+        mGbufferRTs[1]->TransitionTo(mBarriers, commandList, D3D12_RESOURCE_STATE_RENDER_TARGET);
+        mLightingRTs[0]->TransitionTo(mBarriers, commandList, D3D12_RESOURCE_STATE_RENDER_TARGET);
+        mLightingRTs[1]->TransitionTo(mBarriers, commandList, D3D12_RESOURCE_STATE_RENDER_TARGET);
+        // mDepthStencil->TransitionTo(mBarriers, commandList, D3D12_RESOURCE_STATE_DEPTH_WRITE);
+        mSandboxFramework->ResourceBarriersEnd(mBarriers, commandList);
+
+        D3D12_CPU_DESCRIPTOR_HANDLE rtvHandles[] =
+        {
+            mGbufferRTs[0]->GetRTV().GetCPUHandle(),
+            mGbufferRTs[1]->GetRTV().GetCPUHandle()
+        };
+
+        CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(mDepthStencil->GetDSV().GetCPUHandle());
+        commandList->OMSetRenderTargets(_countof(rtvHandles), rtvHandles, FALSE, &mSandboxFramework->GetDepthStencilView());
+
+        const float clearColor[] = { 0.0f, 0.0f, 0.0f, 0.0f };
+        const float clearNormal[] = { 0.0f, 0.0f, 0.0f, 0.0f };
+        commandList->ClearRenderTargetView(rtvHandles[0], clearColor, 0, nullptr);
+        commandList->ClearRenderTargetView(rtvHandles[1], clearNormal, 0, nullptr);
+        //commandList->ClearDepthStencilView(mDepthStencil->GetDSV().GetCPUHandle(), D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+
+        DXRS::DescriptorHandle cbvHandle;
+        DXRS::DescriptorHandle srvHandle;
+
+        srvHandle = gpuDescriptorHeap->GetHandleBlock(0);
+
+        // no textures
+        gpuDescriptorHeap->AddToHandle(device, srvHandle, mNullDescriptor);
+
+        //plane
+        {
+            cbvHandle = gpuDescriptorHeap->GetHandleBlock(2);
+            gpuDescriptorHeap->AddToHandle(device, cbvHandle, mGbufferCB->GetCBV());
+            gpuDescriptorHeap->AddToHandle(device, cbvHandle, mPlaneModel->GetCB()->GetCBV());
+
+            commandList->SetGraphicsRootDescriptorTable(0, cbvHandle.GetGPUHandle());
+            commandList->SetGraphicsRootDescriptorTable(1, srvHandle.GetGPUHandle());
+
+            mPlaneModel->Render(commandList);
+        }
+        //dragon
+        {
+            cbvHandle = gpuDescriptorHeap->GetHandleBlock(2);
+            gpuDescriptorHeap->AddToHandle(device, cbvHandle, mGbufferCB->GetCBV());
+            gpuDescriptorHeap->AddToHandle(device, cbvHandle, mDragonModel->GetCB()->GetCBV());
+
+            commandList->SetGraphicsRootDescriptorTable(0, cbvHandle.GetGPUHandle());
+            commandList->SetGraphicsRootDescriptorTable(1, srvHandle.GetGPUHandle());
+
+            mDragonModel->Render(commandList);
+        }
+
+        //transition rendertargets to shader resources 
+        //mSandboxFramework->ResourceBarriersBegin(mBarriers);
+        //mDepthStencil->TransitionTo(mBarriers, commandList, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+        //mSandboxFramework->ResourceBarriersEnd(mBarriers, commandList);
+    }
+
+    //lighting pass
+    {
+        const float clearColorLighting[] = { 0.0f, 0.0f, 0.0f, 0.0f };
+        D3D12_CPU_DESCRIPTOR_HANDLE rtvHandlesLighting[] =
+        {
+            mLightingRTs[0]->GetRTV().GetCPUHandle(),
+            mLightingRTs[1]->GetRTV().GetCPUHandle()
+        };
+
+        commandList->OMSetRenderTargets(_countof(rtvHandlesLighting), rtvHandlesLighting, FALSE, nullptr);
+        commandList->ClearRenderTargetView(rtvHandlesLighting[0], clearColorLighting, 0, nullptr);
+        commandList->ClearRenderTargetView(rtvHandlesLighting[1], clearColorLighting, 0, nullptr);
+        commandList->SetPipelineState(mLightingPSO.GetPipelineStateObject());
+        commandList->SetGraphicsRootSignature(mLightingRS.GetSignature());
+
+        DXRS::DescriptorHandle cbvHandleLighting = gpuDescriptorHeap->GetHandleBlock(2);
+        gpuDescriptorHeap->AddToHandle(device, cbvHandleLighting, mLightingCB->GetCBV());
+        gpuDescriptorHeap->AddToHandle(device, cbvHandleLighting, mLightsInfoCB->GetCBV());
+
+        DXRS::DescriptorHandle srvHandleLighting = gpuDescriptorHeap->GetHandleBlock(3);
+        gpuDescriptorHeap->AddToHandle(device, srvHandleLighting, mGbufferRTs[0]->GetSRV());
+        gpuDescriptorHeap->AddToHandle(device, srvHandleLighting, mGbufferRTs[1]->GetSRV());
+        gpuDescriptorHeap->AddToHandle(device, srvHandleLighting, mDepthStencil->GetSRV());
+
+        commandList->SetGraphicsRootDescriptorTable(0, cbvHandleLighting.GetGPUHandle());
+        commandList->SetGraphicsRootDescriptorTable(1, srvHandleLighting.GetGPUHandle());
+
+        commandList->IASetVertexBuffers(0, 1, &mSandboxFramework->GetFullscreenQuadBufferView());
+        commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+        commandList->DrawInstanced(4, 1, 0, 0);
+
+        //mSandboxFramework->ResourceBarriersBegin(mBarriers);
+        //mLightingRTs[0]->TransitionTo(mBarriers, commandList, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+        //mLightingRTs[1]->TransitionTo(mBarriers, commandList, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+        //mSandboxFramework->ResourceBarriersEnd(mBarriers, commandList);
+    }
+    
+    //DXR pass
     {
         ID3D12GraphicsCommandList4* commandListDXR = (ID3D12GraphicsCommandList4*)mSandboxFramework->GetCommandList();
         ID3D12DescriptorHeap* heaps[] = { mRaytracingDescriptorHeap.Get() };
         commandListDXR->SetDescriptorHeaps(_countof(heaps), heaps);
 
-        // On the last frame, the raytracing output was used as a copy source, to
-        // copy its contents into the render target. Now we need to transition it to
-        // a UAV so that the shaders can write in it.
-        CD3DX12_RESOURCE_BARRIER transition = CD3DX12_RESOURCE_BARRIER::Transition(mRaytracingOutputResource.Get(), D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-        commandListDXR->ResourceBarrier(1, &transition);
+        //mSandboxFramework->ResourceBarriersBegin(mBarriers);
+        //mGbufferRTs[0]->TransitionTo(mBarriers, commandList, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+        //mGbufferRTs[1]->TransitionTo(mBarriers, commandList, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+        //mDepthStencil->TransitionTo(mBarriers, commandList, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+        //mSandboxFramework->ResourceBarriersEnd(mBarriers, commandList);
+
+        CD3DX12_RESOURCE_BARRIER transitionDepth = CD3DX12_RESOURCE_BARRIER::Transition(mSandboxFramework->GetDepthStencil(), D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_COPY_SOURCE);
+        commandListDXR->ResourceBarrier(1, &transitionDepth);
+
+        commandList->CopyResource(mDepthStencil->GetResource(), mSandboxFramework->GetDepthStencil());
+
+        commandListDXR->SetComputeRootSignature(mGlobalRaytracingRootSignature.Get());
+        commandListDXR->SetComputeRootConstantBufferView(0, mCameraBuffer->GetResource()->GetGPUVirtualAddress());
+        commandListDXR->SetComputeRootConstantBufferView(1, mLightsInfoCB->GetResource()->GetGPUVirtualAddress());
+        
+        mSandboxFramework->ResourceBarriersBegin(mBarriers);
+        mLightingRTs[0]->TransitionTo(mBarriers, commandList, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+        mSandboxFramework->ResourceBarriersEnd(mBarriers, commandList);
 
         // RT dispatch
         D3D12_DISPATCH_RAYS_DESC desc = {};
@@ -850,167 +936,43 @@ void DXRSExampleScene::Render()
         // Dispatch the rays and write to the raytracing output
         commandListDXR->DispatchRays(&desc);
 
-        // The raytracing output needs to be copied to the actual render target used
-        // for display. For this, we need to transition the raytracing output from a
-        // UAV to a copy source, and the render target buffer to a copy destination.
-        // We can then do the actual copy, before transitioning the render target
-        // buffer into a render target, that will be then used to display the image
-        transition = CD3DX12_RESOURCE_BARRIER::Transition(mRaytracingOutputResource.Get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_SOURCE);
+
+        CD3DX12_RESOURCE_BARRIER transition = CD3DX12_RESOURCE_BARRIER::Transition(mLightingRTs[0]->GetResource(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, /*D3D12_RESOURCE_STATE_COPY_SOURCE*/D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
         commandListDXR->ResourceBarrier(1, &transition);
-
-        transition = CD3DX12_RESOURCE_BARRIER::Transition(mSandboxFramework->GetRenderTarget(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_COPY_DEST);
-        commandList->ResourceBarrier(1, &transition);
-
-        commandList->CopyResource(mSandboxFramework->GetRenderTarget(), mRaytracingOutputResource.Get());
-        transition = CD3DX12_RESOURCE_BARRIER::Transition(mSandboxFramework->GetRenderTarget(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_RENDER_TARGET);
-        commandList->ResourceBarrier(1, &transition);
     }
-
-
-    /*
-    DXRS::GPUDescriptorHeap* gpuDescriptorHeap = descriptorHeapManager->GetGPUHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-    gpuDescriptorHeap->Reset();
-
-    ID3D12DescriptorHeap* ppHeaps[] = { gpuDescriptorHeap->GetHeap() };
 
     commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
 
-    CD3DX12_VIEWPORT viewport = CD3DX12_VIEWPORT(0.0f, 0.0f, mSandboxFramework->GetOutputSize().right, mSandboxFramework->GetOutputSize().bottom);
-    CD3DX12_RECT rect = CD3DX12_RECT(0.0f, 0.0f, mSandboxFramework->GetOutputSize().right, mSandboxFramework->GetOutputSize().bottom);
-    commandList->RSSetViewports(1, &viewport);
-    commandList->RSSetScissorRects(1, &rect);
-
-    //gbuffer
-    commandList->SetPipelineState(mGbufferPSO.GetPipelineStateObject());
-    commandList->SetGraphicsRootSignature(mGbufferRS.GetSignature());
-
-    //transition buffers to rendertarget outputs
-    mSandboxFramework->ResourceBarriersBegin(mBarriers);
-    mGbufferRTs[0]->TransitionTo(mBarriers, commandList, D3D12_RESOURCE_STATE_RENDER_TARGET);
-    mGbufferRTs[1]->TransitionTo(mBarriers, commandList, D3D12_RESOURCE_STATE_RENDER_TARGET);
-    mLightingRTs[0]->TransitionTo(mBarriers, commandList, D3D12_RESOURCE_STATE_RENDER_TARGET);
-    mLightingRTs[1]->TransitionTo(mBarriers, commandList, D3D12_RESOURCE_STATE_RENDER_TARGET);
-   // mDepthStencil->TransitionTo(mBarriers, commandList, D3D12_RESOURCE_STATE_DEPTH_WRITE);
-    mSandboxFramework->ResourceBarriersEnd(mBarriers, commandList);
-
-    D3D12_CPU_DESCRIPTOR_HANDLE rtvHandles[] =
+    // composite pass
     {
-        mGbufferRTs[0]->GetRTV().GetCPUHandle(),
-        mGbufferRTs[1]->GetRTV().GetCPUHandle()
-    };
-
-    CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(mDepthStencil->GetDSV().GetCPUHandle());
-    commandList->OMSetRenderTargets(_countof(rtvHandles), rtvHandles, FALSE, &mSandboxFramework->GetDepthStencilView());
-
-    const float clearColor[] = { 0.0f, 0.0f, 0.0f, 0.0f };
-    const float clearNormal[] = { 0.0f, 0.0f, 0.0f, 0.0f };
-    commandList->ClearRenderTargetView(rtvHandles[0], clearColor, 0, nullptr);
-    commandList->ClearRenderTargetView(rtvHandles[1], clearNormal, 0, nullptr);
-    //commandList->ClearDepthStencilView(mDepthStencil->GetDSV().GetCPUHandle(), D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
-
-    DXRS::DescriptorHandle cbvHandle;
-    DXRS::DescriptorHandle srvHandle;
-
-    srvHandle = gpuDescriptorHeap->GetHandleBlock(0);
-
-    //for (int i = 0; i < 1; i++)
-    //{
-    //   //if (i < textures.size())
-    //   //{
-    //   //    gpuDescriptorHeap->AddToHandle(srvHandle, textures[i]->GetSRV());
-    //   //}
-    //   //else
-    //    {
-            gpuDescriptorHeap->AddToHandle(device, srvHandle, mNullDescriptor);
-     //   }
-    //}
-
-
-    //plane
-    {
-        cbvHandle = gpuDescriptorHeap->GetHandleBlock(2);
-        gpuDescriptorHeap->AddToHandle(device, cbvHandle, mGbufferCB->GetCBV());
-        gpuDescriptorHeap->AddToHandle(device, cbvHandle, mPlaneModel->GetCB()->GetCBV());
-
-        commandList->SetGraphicsRootDescriptorTable(0, cbvHandle.GetGPUHandle());
-        commandList->SetGraphicsRootDescriptorTable(1, srvHandle.GetGPUHandle());
-
-        mPlaneModel->Render(commandList);
-    }
-    //dragon
-    {
-        cbvHandle = gpuDescriptorHeap->GetHandleBlock(2);
-        gpuDescriptorHeap->AddToHandle(device, cbvHandle, mGbufferCB->GetCBV());
-        gpuDescriptorHeap->AddToHandle(device, cbvHandle, mDragonModel->GetCB()->GetCBV());
-
-        commandList->SetGraphicsRootDescriptorTable(0, cbvHandle.GetGPUHandle());
-        commandList->SetGraphicsRootDescriptorTable(1, srvHandle.GetGPUHandle());
-
-        mDragonModel->Render(commandList);
+        D3D12_CPU_DESCRIPTOR_HANDLE rtvHandlesFinal[] =
+        {
+             mSandboxFramework->GetRenderTargetView()
+        };
+        
+        commandList->OMSetRenderTargets(_countof(rtvHandlesFinal), rtvHandlesFinal, FALSE, nullptr);
+        commandList->SetPipelineState(mCompositePSO.GetPipelineStateObject());
+        commandList->SetGraphicsRootSignature(mCompositeRS.GetSignature());
+        
+        DXRS::DescriptorHandle srvHandleComposite = gpuDescriptorHeap->GetHandleBlock(2);
+        gpuDescriptorHeap->AddToHandle(device, srvHandleComposite, mLightingRTs[0]->GetSRV());
+        gpuDescriptorHeap->AddToHandle(device, srvHandleComposite, mLightingRTs[1]->GetSRV());
+        
+        commandList->SetGraphicsRootDescriptorTable(0, srvHandleComposite.GetGPUHandle());
+        commandList->IASetVertexBuffers(0, 1, &mSandboxFramework->GetFullscreenQuadBufferView());
+        commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+        commandList->DrawInstanced(4, 1, 0, 0);
     }
 
-    //transition rendertargets to shader resources 
-    //mSandboxFramework->ResourceBarriersBegin(mBarriers);
-    //mDepthStencil->TransitionTo(mBarriers, commandList, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-    //mSandboxFramework->ResourceBarriersEnd(mBarriers, commandList);
-
-    // lighting pass
-    const float clearColorLighting[] = { 0.0f, 0.0f, 0.0f, 0.0f };
-    D3D12_CPU_DESCRIPTOR_HANDLE rtvHandlesLighting[] =
+    //draw imgui 
     {
-        mLightingRTs[0]->GetRTV().GetCPUHandle(),
-        mLightingRTs[1]->GetRTV().GetCPUHandle()
-    };
+        ID3D12DescriptorHeap* ppHeaps[] = { mUIDescriptorHeap.Get() };
+        commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
 
-    commandList->OMSetRenderTargets(_countof(rtvHandlesLighting), rtvHandlesLighting, FALSE, nullptr);
-    commandList->ClearRenderTargetView(rtvHandlesLighting[0], clearColorLighting, 0, nullptr);
-    commandList->ClearRenderTargetView(rtvHandlesLighting[1], clearColorLighting, 0, nullptr);
-    commandList->SetPipelineState(mLightingPSO.GetPipelineStateObject());
-    commandList->SetGraphicsRootSignature(mLightingRS.GetSignature());
+        ImGui::Render();
+        ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), commandList);
+    }
 
-    DXRS::DescriptorHandle cbvHandleLighting = gpuDescriptorHeap->GetHandleBlock(2);
-    gpuDescriptorHeap->AddToHandle(device, cbvHandleLighting, mLightingCB->GetCBV());
-    gpuDescriptorHeap->AddToHandle(device, cbvHandleLighting, mLightsInfoCB->GetCBV());
-
-    DXRS::DescriptorHandle srvHandleLighting = gpuDescriptorHeap->GetHandleBlock(3);
-    gpuDescriptorHeap->AddToHandle(device, srvHandleLighting, mGbufferRTs[0]->GetSRV());
-    gpuDescriptorHeap->AddToHandle(device, srvHandleLighting, mGbufferRTs[1]->GetSRV());
-    gpuDescriptorHeap->AddToHandle(device, srvHandleLighting, mDepthStencil->GetSRV());
-
-    commandList->SetGraphicsRootDescriptorTable(0, cbvHandleLighting.GetGPUHandle());
-    commandList->SetGraphicsRootDescriptorTable(1, srvHandleLighting.GetGPUHandle());
-
-    commandList->IASetVertexBuffers(0, 1,  &mSandboxFramework->GetFullscreenQuadBufferView());
-    commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-    commandList->DrawInstanced(4, 1, 0, 0);
-
-    //mSandboxFramework->ResourceBarriersBegin(mBarriers);
-    //mLightingRTs[0]->TransitionTo(mBarriers, commandList, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-    //mLightingRTs[1]->TransitionTo(mBarriers, commandList, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-    //mSandboxFramework->ResourceBarriersEnd(mBarriers, commandList);
-
-
-    // composite and copy to backbuffer
-    D3D12_CPU_DESCRIPTOR_HANDLE rtvHandlesFinal[] =
-    {
-         mSandboxFramework->GetRenderTargetView()
-    };
-
-    commandList->OMSetRenderTargets(_countof(rtvHandlesFinal), rtvHandlesFinal, FALSE, nullptr);
-    commandList->SetPipelineState(mCompositePSO.GetPipelineStateObject());
-    commandList->SetGraphicsRootSignature(mCompositeRS.GetSignature());
-
-    DXRS::DescriptorHandle srvHandleComposite = gpuDescriptorHeap->GetHandleBlock(2);
-    gpuDescriptorHeap->AddToHandle(device, srvHandleComposite, mLightingRTs[0]->GetSRV());
-    gpuDescriptorHeap->AddToHandle(device, srvHandleComposite, mLightingRTs[1]->GetSRV());
-
-    commandList->SetGraphicsRootDescriptorTable(0, srvHandleComposite.GetGPUHandle());
-    commandList->IASetVertexBuffers(0, 1, &mSandboxFramework->GetFullscreenQuadBufferView());
-    commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-    commandList->DrawInstanced(4, 1, 0, 0);*/
-
-    //mSandboxFramework->ResourceBarriersBegin(mBarriers);
-    //mSandboxFramework->ResourceBarriersEnd(mBarriers, commandList);
     // Show the new frame.
     mSandboxFramework->Present();
     mGraphicsMemory->Commit(mSandboxFramework->GetCommandQueue());
@@ -1027,7 +989,7 @@ void DXRSExampleScene::Update(DXRSTimer const& timer)
     float width = mSandboxFramework->GetOutputSize().right;
     float height = mSandboxFramework->GetOutputSize().bottom;
     GBufferCBData gbufferPassData;
-    gbufferPassData.ViewProjection = mCamreaView * mCameraProjection;
+    gbufferPassData.ViewProjection = mCameraView * mCameraProjection;
     gbufferPassData.InvViewProjection = XMMatrixInverse(nullptr, gbufferPassData.ViewProjection);
     gbufferPassData.MipBias = 0.0f;
     gbufferPassData.CameraPos = XMFLOAT4(mCameraEye.x, mCameraEye.y, mCameraEye.z, 1);
@@ -1042,13 +1004,35 @@ void DXRSExampleScene::Update(DXRSTimer const& timer)
 
     UpdateLights();
 
-    //TODO map model cb
     XMMATRIX local = mWorld * Matrix::CreateScale(0.3f, 0.3f, 0.3f) * Matrix::CreateTranslation(0, 0, 0.0f);
     mDragonModel->UpdateWorldMatrix(local);
 
     local = mWorld * Matrix::CreateScale(8.0f, 8.0f, 8.0f) * Matrix::CreateTranslation(0, 0, 0.0f) * Matrix::CreateRotationX(-3.14f / 2.0f);
     mPlaneModel->UpdateWorldMatrix(local);
 
+    UpdateImGui();
+}
+
+void DXRSExampleScene::UpdateImGui()
+{
+    //capture mouse clicks
+    ImGui::GetIO().MouseDown[0] = (GetKeyState(VK_LBUTTON) & 0x8000) != 0;
+    ImGui::GetIO().MouseDown[1] = (GetKeyState(VK_RBUTTON) & 0x8000) != 0;
+    ImGui::GetIO().MouseDown[2] = (GetKeyState(VK_MBUTTON) & 0x8000) != 0;
+
+    ImGui_ImplDX12_NewFrame();
+    ImGui_ImplWin32_NewFrame();
+    ImGui::NewFrame();
+
+    {
+        ImGui::Begin("DirectX Raytracing Sandbox");
+        ImGui::TextColored(ImVec4(0.95f, 0.5f, 0.0f, 1), "FPS: (%.1f FPS), %.3f ms/frame", ImGui::GetIO().Framerate, 1000.0f / ImGui::GetIO().Framerate);
+        ImGui::SliderFloat4("Light Color", mDirectionalLightColor, 0.0f, 1.0f);
+        ImGui::SliderFloat4("Light Direction", mDirectionalLightDir, 0.0f, 1.0f);
+        ImGui::SliderFloat("Light Intensity", &mDirectionalLightIntensity, 0.0f, 5.0f);
+        ImGui::SliderFloat("Orbit camera radius", &mCameraRadius, 5.0f, 50.0f);
+        ImGui::End();
+    }
 }
 
 void DXRSExampleScene::UpdateLights()
@@ -1072,14 +1056,14 @@ void DXRSExampleScene::UpdateLights()
 void DXRSExampleScene::UpdateControls()
 {
     auto mouse = mMouse->GetState();
-    if (mouse.leftButton)
+    if (mouse.rightButton)
     {
         float dx = XMConvertToRadians(0.25f * static_cast<float>(mouse.x - mLastMousePosition.x));
         float dy = -XMConvertToRadians(0.25f * static_cast<float>(mouse.y - mLastMousePosition.y));
-
+    
         mCameraTheta += dx;
         mCameraPhi += dy;
-
+    
         mCameraPhi = std::clamp(mCameraPhi, 0.1f, 3.14f - 0.1f);
     }
     mLastMousePosition.x = mouse.x;
@@ -1099,19 +1083,22 @@ void DXRSExampleScene::UpdateCamera()
 
     Vector3 at(0.0f, 0.0f, 0.0f);
 
-    mCamreaView = Matrix::CreateLookAt(mCameraEye, at, Vector3::UnitY);
+    mCameraView = Matrix::CreateLookAt(mCameraEye, at, Vector3::UnitY);
 
-    std::vector<XMMATRIX> matrices(4); //TODO remove from update
-    matrices[0] = mCamreaView;
-    matrices[1] = mCameraProjection;
-    matrices[2] = XMMatrixInverse(nullptr, mCamreaView);
-    matrices[3] = XMMatrixInverse(nullptr, mCameraProjection);
+    CameraBuffer buffer;
+    float width = mSandboxFramework->GetOutputSize().right;
+    float height = mSandboxFramework->GetOutputSize().bottom;
 
-    // Copy the matrix contents
-    uint8_t* pData;
-    ThrowIfFailed(mCameraBuffer->Map(0, nullptr, (void**)&pData));
-    memcpy(pData, matrices.data(), 4 * sizeof(XMMATRIX));
-    mCameraBuffer->Unmap(0, nullptr);
+    buffer.view         = mCameraView;
+    buffer.projection   = mCameraProjection;
+    buffer.viewI        = XMMatrixInverse(nullptr, mCameraView);
+    buffer.projectionI  = XMMatrixInverse(nullptr, mCameraProjection);
+    buffer.camToWorld   = XMMatrixTranspose(XMMatrixInverse(nullptr, mCameraProjection * mCameraView));
+    buffer.camPosition  = XMFLOAT4(mCameraEye.x, mCameraEye.y, mCameraEye.z, 1.0f);
+    buffer.resolution   = XMFLOAT2(width, height);
+
+    // Copy the contents
+    memcpy(mCameraBuffer->Map(), &buffer, sizeof(CameraBuffer));
 }
 
 void DXRSExampleScene::SetProjectionMatrix()
@@ -1123,7 +1110,7 @@ void DXRSExampleScene::SetProjectionMatrix()
     if (aspectRatio < 1.0f)
         fovAngleY *= 2.0f;
 
-    mCameraProjection = Matrix::CreatePerspectiveFieldOfView(fovAngleY, aspectRatio, 0.01f, 100.0f);
+    mCameraProjection = Matrix::CreatePerspectiveFieldOfView(fovAngleY, aspectRatio, 1.0f, 10000.0f);
 }
 
 void DXRSExampleScene::OnWindowSizeChanged(int width, int height)

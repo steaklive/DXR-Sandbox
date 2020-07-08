@@ -22,6 +22,8 @@ DXRSGraphics::DXRSGraphics(DXGI_FORMAT backBufferFormat, DXGI_FORMAT depthBuffer
 {
     //assert(backBufferCount > MAX_BACK_BUFFER_COUNT);
     //assert(minFeatureLevel < D3D_FEATURE_LEVEL_11_0);
+
+    mCurrentPath = std::filesystem::current_path();
 }
 
 DXRSGraphics::~DXRSGraphics()
@@ -152,6 +154,7 @@ void DXRSGraphics::CreateResources()
 
     // Create a command list for recording graphics commands.
     ThrowIfFailed(mDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, mCommandAllocators[0].Get(), nullptr, IID_PPV_ARGS(mCommandList.ReleaseAndGetAddressOf())));
+
 }
 
 // Close and flush command list after initialization 
@@ -644,3 +647,41 @@ IDxcBlob* DXRSGraphics::CompileShaderLibrary(LPCWSTR fileName)
     ThrowIfFailed(pResult->GetResult(&pBlob));
     return pBlob;
 }
+
+
+std::wstring DXRSGraphics::ExecutableDirectory()
+{
+    WCHAR buffer[MAX_PATH];
+    GetModuleFileName(nullptr, buffer, MAX_PATH);
+
+    return std::wstring(buffer);
+}
+
+std::string DXRSGraphics::GetFilePath(const std::string& input)
+{
+    std::wstring exeDirL = ExecutableDirectory();
+    std::string exeDir = std::string(exeDirL.begin(), exeDirL.end());
+    std::string key("\\");
+    exeDir = exeDir.substr(0, exeDir.rfind(key));
+    exeDir = exeDir.substr(0, exeDir.rfind(key));
+    exeDir = exeDir.substr(0, exeDir.rfind(key));
+    exeDir = exeDir.substr(0, exeDir.rfind(key));
+    exeDir.append(key);
+    exeDir.append(input);
+
+    return exeDir;
+}
+std::wstring DXRSGraphics::GetFilePath(const std::wstring& input)
+{
+    std::wstring exeDir = ExecutableDirectory();
+    std::wstring key(L"\\");
+    exeDir = exeDir.substr(0, exeDir.rfind(key));
+    exeDir = exeDir.substr(0, exeDir.rfind(key));
+    exeDir = exeDir.substr(0, exeDir.rfind(key));
+    exeDir = exeDir.substr(0, exeDir.rfind(key));
+    exeDir.append(key);
+    exeDir.append(input);
+
+    return exeDir;
+}
+

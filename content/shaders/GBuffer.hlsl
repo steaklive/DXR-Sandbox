@@ -61,23 +61,17 @@ PSOutput PSMain(PSInput input)
 {
 	PSOutput output = (PSOutput)0;
 
-	float3 n = 0;
+    float4 finalColor = DiffuseColor;
+	
+    if (DiffuseColor.w > 0.0) // just some basic art (checkerboard pattern for reflective surfaces - floor)
+    {
+        float checkerboard = floor(input.worldPos.x) + floor(input.worldPos.z);
+        checkerboard = frac(checkerboard * 0.5) * 2;
+        finalColor = lerp(float4(0, 0, 0, DiffuseColor.w), float4(0.2, 0.2, 0.2, DiffuseColor.w), checkerboard);
+    }
 
-	//if (AlbedoID >= 0)
-	//{
-	//	albedo = Textures[AlbedoID].SampleBias(SamplerLinear, finalTexOffset, MipBias).rgba;
-	//}
-	//clip(albedo.a - 0.5f);
-
-	//if (NormalID >= 0)
-	//{
-	//	n = Textures[NormalID].SampleBias(SamplerLinear, input.uv, MipBias).rgb * 2 - 1;
-	//}
-
-
-    output.colour = DiffuseColor;
+    output.colour = finalColor;
     output.normal = float4(input.normal, 1);
-    //normalize(input.normal.xyz + float3(n.xy, 0));
 
     return output;
 }

@@ -38,7 +38,7 @@ PSOutput PSMain(PSInput input)
     float3 diffuse = lightDiffuseBuffer[input.position.xy].rgb;
     float3 specular = lightSpecularBuffer[input.position.xy].rgb;
 
-    output.colour.rgb = diffuse + specular;
+    output.colour.rgb = diffuse; // + specular;
 
     return output;
 }

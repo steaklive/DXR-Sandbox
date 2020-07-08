@@ -5,6 +5,8 @@
 DXRSModel::DXRSModel(DXRSGraphics& dxWrapper, const std::string& filename, bool flipUVs, XMMATRIX transformWorld, XMFLOAT4 color)
 	: mMeshes(), mMaterials(), mDXWrapper(dxWrapper)
 {
+	mDiffuseColor = color;
+
 	Assimp::Importer importer;
 
 	UINT flags = aiProcess_Triangulate | aiProcess_JoinIdenticalVertices | aiProcess_SortByPType | aiProcess_FlipWindingOrder;
@@ -53,7 +55,6 @@ DXRSModel::DXRSModel(DXRSGraphics& dxWrapper, const std::string& filename, bool 
 	cbData.DiffuseColor = color;
 	memcpy(mBufferCB->Map(), &cbData, sizeof(cbData));
 
-	mDiffuseColor = color;
 }
 
 DXRSModel::~DXRSModel()

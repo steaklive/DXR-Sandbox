@@ -117,6 +117,8 @@ public:
     /// algorithms must be flattened to a loop in the ray generation program for best performance.
     void SetMaxRecursionDepth(UINT maxDepth);
 
+    void SetGlobalRootSignature(ID3D12RootSignature* rs) { m_globalRootSignature = rs; }
+
     /// Compiles the raytracing state object
     ID3D12StateObject* Generate();
 
@@ -187,7 +189,7 @@ private:
 
     ID3D12Device5* m_device;
     ID3D12RootSignature* m_dummyLocalRootSignature;
-    ID3D12RootSignature* m_dummyGlobalRootSignature;
+    ID3D12RootSignature* m_globalRootSignature;
 
 
 };

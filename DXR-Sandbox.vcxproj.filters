@@ -28,6 +28,9 @@
     <Filter Include="Source Files\External\NVIDIA">
       <UniqueIdentifier>{efde4483-951f-4148-9820-a54cfc288426}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\External\ImGUI">
+      <UniqueIdentifier>{3bfb73e6-68a6-401e-a627-3b55dadfd3bd}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="source\Common.h">
@@ -90,6 +93,30 @@
     <ClInclude Include="source\ShaderBindingTableGenerator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="external\ImGUI\imconfig.h">
+      <Filter>Source Files\External\ImGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="external\ImGUI\imgui.h">
+      <Filter>Source Files\External\ImGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="external\ImGUI\imgui_impl_dx12.h">
+      <Filter>Source Files\External\ImGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="external\ImGUI\imgui_impl_win32.h">
+      <Filter>Source Files\External\ImGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="external\ImGUI\imgui_internal.h">
+      <Filter>Source Files\External\ImGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="external\ImGUI\imstb_rectpack.h">
+      <Filter>Source Files\External\ImGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="external\ImGUI\imstb_textedit.h">
+      <Filter>Source Files\External\ImGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="external\ImGUI\imstb_truetype.h">
+      <Filter>Source Files\External\ImGUI</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="DXR-Sandbox.rc">
@@ -143,6 +170,24 @@
     </ClCompile>
     <ClCompile Include="source\ShaderBindingTableGenerator.cpp">
       <Filter>Source Files\External\NVIDIA</Filter>
+    </ClCompile>
+    <ClCompile Include="external\ImGUI\imgui.cpp">
+      <Filter>Source Files\External\ImGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="external\ImGUI\imgui_demo.cpp">
+      <Filter>Source Files\External\ImGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="external\ImGUI\imgui_draw.cpp">
+      <Filter>Source Files\External\ImGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="external\ImGUI\imgui_impl_dx12.cpp">
+      <Filter>Source Files\External\ImGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="external\ImGUI\imgui_impl_win32.cpp">
+      <Filter>Source Files\External\ImGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="external\ImGUI\imgui_widgets.cpp">
+      <Filter>Source Files\External\ImGUI</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

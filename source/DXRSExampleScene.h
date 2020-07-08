@@ -31,6 +31,7 @@ private:
     void UpdateLights();
     void UpdateControls();
     void UpdateCamera();
+    void UpdateImGui();
 
     //raytracing methods
     void CreateRaytracingPSO();
@@ -40,7 +41,7 @@ private:
     void CreateRaytracingResourceHeap();
 
     DXRSGraphics*   	                                 mSandboxFramework;
-                                                         
+                                           
 	U_PTR<GamePad>	                                     mGamePad;
 	U_PTR<Keyboard>                                      mKeyboard;
 	U_PTR<Mouse>                                         mMouse;
@@ -78,13 +79,16 @@ private:
     RootSignature                                        mCompositeRS;
     GraphicsPSO                                          mCompositePSO;
 
+    // UI
+    ComPtr<ID3D12DescriptorHeap>                         mUIDescriptorHeap;
+
     // Lighting
     RootSignature                                        mLightingRS;
     std::vector< DXRSRenderTarget*>                      mLightingRTs;
     GraphicsPSO                                          mLightingPSO;
     DXRSBuffer*                                          mLightingCB;
     DXRSBuffer*                                          mLightsInfoCB;
-
+    
     __declspec(align(16)) struct LightingCBData
     {
         XMMATRIX InvViewProjection;
@@ -115,7 +119,7 @@ private:
     // Directional light
     float mDirectionalLightColor[4]{ 0.9, 0.9, 0.9, 1.0 };
     float mDirectionalLightDir[4]{ 0.0, 0.707f, 0.707f, 1.0 };
-    float mDirectionalLightIntensity = 1.0f;
+    float mDirectionalLightIntensity = 1.7f;
 
     // Raytracing
     IDxcBlob* mRaygenBlob;
@@ -129,21 +133,34 @@ private:
     ComPtr<ID3D12DescriptorHeap>        mRaytracingDescriptorHeap;
     ComPtr<ID3D12StateObject>           mRaytracingPSO;
     ComPtr<ID3D12StateObjectProperties> mRaytracingPSOProperties;
-    ComPtr<ID3D12Resource>              mRaytracingOutputResource;
     ComPtr<ID3D12Resource>              mRaytracingShaderTableBuffer;
     ShaderBindingTableGenerator         mRaytracingShaderBindingTableHelper;
+    //ComPtr<ID3D12Resource>              mRaytracingOutputResource;
+
+    ComPtr<ID3D12RootSignature>         mGlobalRaytracingRootSignature;
 
     DXRSBuffer* mTLASBuffer; // top level acceleration structure of the scene
 
     // Camera
-    ComPtr<ID3D12Resource> mCameraBuffer;
-    XMFLOAT2 mLastMousePosition;
+    __declspec(align(16)) struct CameraBuffer
+    {
+        XMMATRIX view;
+        XMMATRIX projection;
+        XMMATRIX viewI;
+        XMMATRIX projectionI;
+        XMMATRIX camToWorld;
+        XMFLOAT4 camPosition;
+        XMFLOAT2 resolution;
+    };
+
+    DXRSBuffer* mCameraBuffer;
     float mCameraTheta = -1.5f * XM_PI;
     float mCameraPhi = XM_PI / 3;
     float mCameraRadius = 25.0f;
     Vector3 mCameraEye{ 0.0f, 0.0f, 0.0f };
-    Matrix mCamreaView;
+    Matrix mCameraView;
     Matrix mCameraProjection;
+    XMFLOAT2 mLastMousePosition;
 
     Matrix mWorld;
 };

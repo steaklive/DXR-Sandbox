@@ -144,9 +144,42 @@ DXRSMesh::DXRSMesh(ID3D12Device* device, DXRSModel& model, aiMesh& mesh)
 
 	// Initialize the vertex buffer view.
 	mIndexBufferView.BufferLocation = mIndexBuffer->GetGPUVirtualAddress();
-	mIndexBufferView.Format = DXGI_FORMAT_R32_UINT;
+	mIndexBufferView.Format = DXGI_FORMAT_R32_UINT/*DXGI_FORMAT_R16_UINT*/;
 	mIndexBufferView.SizeInBytes = indexBufferSize;
 
+	auto descriptorManager =  mModel.GetDXWrapper().GetDescriptorHeapManager();
+
+	D3D12_SHADER_RESOURCE_VIEW_DESC SRVDesc = {};
+	SRVDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+	SRVDesc.Format = DXGI_FORMAT_R32_TYPELESS;
+	SRVDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	SRVDesc.Buffer.NumElements = mNumOfIndices;
+	SRVDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_RAW;
+	mIndexBufferSRV = descriptorManager->CreateCPUHandle(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	device->CreateShaderResourceView(mIndexBuffer.Get(), &SRVDesc, mIndexBufferSRV.GetCPUHandle());
+
+	D3D12_SHADER_RESOURCE_VIEW_DESC SRVDescVB = {};
+	SRVDescVB.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+	SRVDescVB.Format = DXGI_FORMAT_UNKNOWN;
+	SRVDescVB.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	SRVDescVB.Buffer.NumElements = mVertices.size();
+	SRVDescVB.Buffer.StructureByteStride = sizeof(Vertex);
+	SRVDescVB.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
+	mVertexBufferSRV = descriptorManager->CreateCPUHandle(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	device->CreateShaderResourceView(mVertexBuffer.Get(), &SRVDescVB, mVertexBufferSRV.GetCPUHandle());
+
+	//create constant buffer for mehs info
+	DXRSBuffer::Description cbDesc;
+	cbDesc.mElementSize = sizeof(MeshInfo);
+	cbDesc.mState = D3D12_RESOURCE_STATE_GENERIC_READ;
+	cbDesc.mDescriptorType = DXRSBuffer::DescriptorType::CBV;
+	mMeshInfo = new DXRSBuffer(mModel.GetDXWrapper().GetD3DDevice(), descriptorManager, mModel.GetDXWrapper().GetCommandList(), cbDesc, L"Mesh Info CB");
+	
+	MeshInfo buffer;
+	buffer.color = mModel.GetDiffuseColor(); // for now just color from the model
+
+	// Copy the contents
+	memcpy(mMeshInfo->Map(), &buffer, sizeof(MeshInfo));
 }
 
 DXRSMesh::~DXRSMesh()

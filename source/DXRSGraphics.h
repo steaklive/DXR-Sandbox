@@ -19,6 +19,8 @@ using namespace Microsoft::WRL;
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <filesystem>
+
 
 namespace DXRS {
     class DescriptorHeapManager;
@@ -77,6 +79,10 @@ public:
 
     static const size_t                 MAX_BACK_BUFFER_COUNT = 3;
     static UINT                         mBackBufferIndex;
+
+    std::string GetFilePath(const std::string& input);
+    std::wstring GetFilePath(const std::wstring& input);
+
 private:
 
     DXRSGraphics(const DXRSGraphics& rhs);
@@ -121,4 +127,8 @@ private:
     ComPtr<ID3D12Resource>              mFullscreenQuadVertexBuffer;
     ComPtr<ID3D12Resource>              mFullscreenQuadVertexBufferUpload;
     D3D12_VERTEX_BUFFER_VIEW            mFullscreenQuadVertexBufferView;
+
+    std::filesystem::path               mCurrentPath;
+    std::wstring ExecutableDirectory();
 };
+

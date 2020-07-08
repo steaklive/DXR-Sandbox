@@ -107,7 +107,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)\external\dxc\include;$(SolutionDir)\external\Assimp\include;$(SolutionDir)\external\DirectXTK12\Inc;$(SolutionDir)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\external\dxc\include;$(SolutionDir)\external\ImGUI\;$(SolutionDir)\external\Assimp\include;$(SolutionDir)\external\DirectXTK12\Inc;$(SolutionDir)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
@@ -147,7 +147,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)\external\dxc\include;$(SolutionDir)\external\Assimp\include;$(SolutionDir)\external\DirectXTK12\Inc;$(SolutionDir)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\external\ImGUI;$(SolutionDir)\external\dxc\include;$(SolutionDir)\external\Assimp\include;$(SolutionDir)\external\DirectXTK12\Inc;$(SolutionDir)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <CompileAsWinRT>false</CompileAsWinRT>
       <Optimization>MaxSpeed</Optimization>
@@ -163,6 +163,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="external\ImGUI\imconfig.h" />
+    <ClInclude Include="external\ImGUI\imgui.h" />
+    <ClInclude Include="external\ImGUI\imgui_impl_dx12.h" />
+    <ClInclude Include="external\ImGUI\imgui_impl_win32.h" />
+    <ClInclude Include="external\ImGUI\imgui_internal.h" />
+    <ClInclude Include="external\ImGUI\imstb_rectpack.h" />
+    <ClInclude Include="external\ImGUI\imstb_textedit.h" />
+    <ClInclude Include="external\ImGUI\imstb_truetype.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="source\Common.h" />
     <ClInclude Include="source\DescriptorHeap.h" />
@@ -191,6 +199,12 @@
     <Image Include="DXRS.ico" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="external\ImGUI\imgui.cpp" />
+    <ClCompile Include="external\ImGUI\imgui_demo.cpp" />
+    <ClCompile Include="external\ImGUI\imgui_draw.cpp" />
+    <ClCompile Include="external\ImGUI\imgui_impl_dx12.cpp" />
+    <ClCompile Include="external\ImGUI\imgui_impl_win32.cpp" />
+    <ClCompile Include="external\ImGUI\imgui_widgets.cpp" />
     <ClCompile Include="source\DescriptorHeap.cpp" />
     <ClCompile Include="source\DXRSBuffer.cpp" />
     <ClCompile Include="source\DXRSDepthBuffer.cpp" />

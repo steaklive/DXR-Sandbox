@@ -48,6 +48,8 @@ public:
 
 	void SetBlasBuffer(DXRSBuffer* buffer) { mBLASBuffer = buffer; }
 	DXRSBuffer* GetBlasBuffer() { return mBLASBuffer; }
+
+	XMFLOAT4 GetDiffuseColor() { return mDiffuseColor; }
 private:
 	DXRSModel(const DXRSModel& rhs);
 	DXRSModel& operator=(const DXRSModel& rhs);

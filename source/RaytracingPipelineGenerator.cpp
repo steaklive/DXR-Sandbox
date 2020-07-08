@@ -239,7 +239,7 @@ ID3D12StateObject* RayTracingPipelineGenerator::Generate()
     // The pipeline construction always requires an empty global root signature
     D3D12_STATE_SUBOBJECT globalRootSig;
     globalRootSig.Type = D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_ROOT_SIGNATURE;
-    ID3D12RootSignature* dgSig = m_dummyGlobalRootSignature;
+    ID3D12RootSignature* dgSig = m_globalRootSignature;
     globalRootSig.pDesc = &dgSig;
 
     subobjects[currentIndex++] = globalRootSig;
@@ -305,7 +305,7 @@ void RayTracingPipelineGenerator::CreateDummyRootSignatures()
     }
     hr = m_device->CreateRootSignature(0, serializedRootSignature->GetBufferPointer(),
         serializedRootSignature->GetBufferSize(),
-        IID_PPV_ARGS(&m_dummyGlobalRootSignature));
+        IID_PPV_ARGS(&m_globalRootSignature));
 
     serializedRootSignature->Release();
     if (FAILED(hr))
