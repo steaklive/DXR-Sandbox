@@ -652,7 +652,7 @@ void DXRSExampleScene::CreateRaytracingShaderTable()
     mRaytracingShaderBindingTableHelper.Reset();
 
     // The pointer to the beginning of the heap is the only parameter required by shaders without root parameters
-    D3D12_GPU_DESCRIPTOR_HANDLE srvUavHeapHandle = mRaytracingDescriptorHeap->GetGPUDescriptorHandleForHeapStart() /*GetHeapGPUStart()*/;
+    D3D12_GPU_DESCRIPTOR_HANDLE srvUavHeapHandle = mRaytracingDescriptorHeap->GetGPUDescriptorHandleForHeapStart();
     
     // The helper treats both root parameter pointers and heap pointers as void*,
     // while DX12 uses the
@@ -710,7 +710,7 @@ void DXRSExampleScene::CreateRaytracingResourceHeap()
 
     // Get a handle to the heap memory on the CPU side, to be able to write the
     // descriptors directly
-    D3D12_CPU_DESCRIPTOR_HANDLE srvHandle = mRaytracingDescriptorHeap->GetCPUDescriptorHandleForHeapStart()/*GetHeapCPUStart()*/;
+    D3D12_CPU_DESCRIPTOR_HANDLE srvHandle = mRaytracingDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 
     // UAV
     device->CopyDescriptorsSimple(1, srvHandle, mLightingRTs[0]->GetUAV().GetCPUHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
@@ -839,10 +839,6 @@ void DXRSExampleScene::Render()
             mDragonModel->Render(commandList);
         }
 
-        //transition rendertargets to shader resources 
-        //mSandboxFramework->ResourceBarriersBegin(mBarriers);
-        //mDepthStencil->TransitionTo(mBarriers, commandList, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-        //mSandboxFramework->ResourceBarriersEnd(mBarriers, commandList);
     }
 
     //lighting pass
@@ -876,10 +872,6 @@ void DXRSExampleScene::Render()
         commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
         commandList->DrawInstanced(4, 1, 0, 0);
 
-        //mSandboxFramework->ResourceBarriersBegin(mBarriers);
-        //mLightingRTs[0]->TransitionTo(mBarriers, commandList, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-        //mLightingRTs[1]->TransitionTo(mBarriers, commandList, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-        //mSandboxFramework->ResourceBarriersEnd(mBarriers, commandList);
     }
     
     //DXR pass
@@ -936,9 +928,8 @@ void DXRSExampleScene::Render()
         // Dispatch the rays and write to the raytracing output
         commandListDXR->DispatchRays(&desc);
 
-
-        CD3DX12_RESOURCE_BARRIER transition = CD3DX12_RESOURCE_BARRIER::Transition(mLightingRTs[0]->GetResource(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, /*D3D12_RESOURCE_STATE_COPY_SOURCE*/D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-        commandListDXR->ResourceBarrier(1, &transition);
+		CD3DX12_RESOURCE_BARRIER transitionDepthBack = CD3DX12_RESOURCE_BARRIER::Transition(mSandboxFramework->GetDepthStencil(), D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE);
+		commandListDXR->ResourceBarrier(1, &transitionDepthBack);
     }
 
     commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
@@ -954,6 +945,10 @@ void DXRSExampleScene::Render()
         commandList->SetPipelineState(mCompositePSO.GetPipelineStateObject());
         commandList->SetGraphicsRootSignature(mCompositeRS.GetSignature());
         
+		mSandboxFramework->ResourceBarriersBegin(mBarriers);
+		mLightingRTs[0]->TransitionTo(mBarriers, commandList, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		mSandboxFramework->ResourceBarriersEnd(mBarriers, commandList);
+
         DXRS::DescriptorHandle srvHandleComposite = gpuDescriptorHeap->GetHandleBlock(2);
         gpuDescriptorHeap->AddToHandle(device, srvHandleComposite, mLightingRTs[0]->GetSRV());
         gpuDescriptorHeap->AddToHandle(device, srvHandleComposite, mLightingRTs[1]->GetSRV());

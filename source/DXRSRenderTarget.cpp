@@ -76,7 +76,7 @@ void DXRSRenderTarget::TransitionTo(std::vector<CD3DX12_RESOURCE_BARRIER>& barri
 {
 	if (stateAfter != mCurrentResourceState)
 	{
-		barriers.push_back(CD3DX12_RESOURCE_BARRIER::Transition(GetResource(), mCurrentResourceState, D3D12_RESOURCE_STATE_PRESENT));
+		barriers.push_back(CD3DX12_RESOURCE_BARRIER::Transition(GetResource(), mCurrentResourceState, stateAfter));
 		mCurrentResourceState = stateAfter;
 	}
 }
