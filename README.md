@@ -8,7 +8,7 @@ I have used a couple of classes from:
 
 This project is not an ideal engine but just a way to test things quickly if you want to learn DXR. I am not a DX12 expert which is why some things could be done better.
 
-![picture](screenshots/DXRS_Reflections.png)
+![picture](screenshots/DXRS_Shadows.png)
 
 # Features (not raytracing)
 - Deferred Rendering (without texture support for now)
@@ -19,10 +19,11 @@ This project is not an ideal engine but just a way to test things quickly if you
 # Features (raytracing)
 - full essential DXR setup with RayGen/Miss/Hit shaders, accelaration structures, etc.
 - reflections 
+- shadows
 
 # TODO 
 - ~~Combine raytracing ouput with deferred lighting~~
-- Ray Traced Shadows
+- ~~Ray Traced Shadows
 - ~~Ray Traced Reflections~~
 - Ray Traced Ambient Occlusion
 - PBR/texture support
