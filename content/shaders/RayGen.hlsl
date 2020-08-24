@@ -11,14 +11,6 @@ cbuffer CameraParams : register(b0)
     float2 resolution;
 }
 
-cbuffer LightParams : register(b1)
-{
-    float4 Direction;
-    float4 Color;
-    float Intensity;
-    float3 pad;
-}
-
 // Raytracing acceleration structure, accessed as a SRV
 RaytracingAccelerationStructure SceneBVH : register(t0);
 
@@ -73,4 +65,37 @@ void RayGen() {
     payload.skipShading = false;
     payload.rayHitT = FLT_MAX;
     TraceRay(SceneBVH, RAY_FLAG_NONE /*RAY_FLAG_CULL_BACK_FACING_TRIANGLES*/, ~0, 0, 0, 0, rayDesc, payload);
+}
+
+[shader("raygeneration")]
+void ShadowRayGen()
+{
+    uint2 DTid = DispatchRaysIndex().xy;
+    float2 xy = DTid.xy + 0.5;
+
+    // Screen position for the ray
+    float2 screenPos = xy / resolution * 2.0 - 1.0;
+    // Invert Y for DirectX-style coordinates
+    screenPos.y = -screenPos.y;
+
+    float2 readGBufferAt = xy;
+    float sceneDepth = GBufferDepth.Load(int3(readGBufferAt, 0));
+    
+    // Initialize the ray payload
+    float3 worldOrigin =  ReconstructWorldPosFromDepth(screenPos, sceneDepth, projectionI, viewI);
+    float3 lightDir = LightDirection.xyz;
+
+    RayDesc ray;
+    ray.Origin = worldOrigin;
+    ray.Direction = lightDir;
+    ray.TMin = 0.001f;
+    ray.TMax = 100000;
+    bool hit = true;
+
+    ShadowPayload shadowPayload;
+    shadowPayload.isHit = false;
+
+    // do not forget to offset shadow hit group and shadow miss shader
+    TraceRay(SceneBVH, RAY_FLAG_NONE, 0xFF, 1, 0, 1, ray, shadowPayload);
+
 }

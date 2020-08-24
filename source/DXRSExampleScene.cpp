@@ -414,18 +414,19 @@ void DXRSExampleScene::CreateRaytracingPSO()
 
     pipeline.SetGlobalRootSignature(mGlobalRaytracingRootSignature.Get());
 
-    pipeline.AddLibrary(mRaygenBlob, { L"RayGen" });
-    pipeline.AddLibrary(mMissBlob, { L"Miss" });
-    pipeline.AddLibrary(mClosestHitBlob, { L"ClosestHit" });
+    pipeline.AddLibrary(mRaygenBlob, { L"RayGen", L"ShadowRayGen" });
+    pipeline.AddLibrary(mMissBlob, { L"Miss", L"ShadowMiss" });
+    pipeline.AddLibrary(mClosestHitBlob, {L"ClosestHit", L"ShadowClosestHit" });
 
     pipeline.AddHitGroup(L"HitGroup", L"ClosestHit");
+    pipeline.AddHitGroup(L"ShadowHitGroup", L"ShadowClosestHit");
     
-    pipeline.AddRootSignatureAssociation(mRaygenRS.GetSignature(), { L"RayGen" });
-    pipeline.AddRootSignatureAssociation(mMissRS.GetSignature(), { L"Miss" });
-    pipeline.AddRootSignatureAssociation(mClosestHitRS.GetSignature(), { L"HitGroup" });
+    pipeline.AddRootSignatureAssociation(mRaygenRS.GetSignature(), { L"RayGen", L"ShadowRayGen" });
+    pipeline.AddRootSignatureAssociation(mMissRS.GetSignature(), { L"Miss", L"ShadowMiss"});
+    pipeline.AddRootSignatureAssociation(mClosestHitRS.GetSignature(), { L"HitGroup", L"ShadowHitGroup" });
     
-    pipeline.SetMaxPayloadSize(/*sizeof(XMFLOAT4)*/ 8);
-    pipeline.SetMaxAttributeSize(sizeof(XMFLOAT2)); // barycentric coordinates
+    pipeline.SetMaxPayloadSize(/*sizeof(XMFLOAT4)*/8);
+    pipeline.SetMaxAttributeSize(sizeof(XMFLOAT2)); // barycentric coordinates - not used
     pipeline.SetMaxRecursionDepth(1);
     
     // Compile the pipeline for execution on the GPU
@@ -661,9 +662,13 @@ void DXRSExampleScene::CreateRaytracingShaderTable()
     auto heapPointer = reinterpret_cast<UINT64*>(srvUavHeapHandle.ptr);
     
     mRaytracingShaderBindingTableHelper.AddRayGenerationProgram(L"RayGen", { heapPointer });
+    mRaytracingShaderBindingTableHelper.AddRayGenerationProgram(L"ShadowRayGen", { heapPointer });
     mRaytracingShaderBindingTableHelper.AddMissProgram(L"Miss", { heapPointer });
-    mRaytracingShaderBindingTableHelper.AddHitGroup(L"HitGroup", { heapPointer, (void*)(mPlaneModel->Meshes()[0]->GetVertexBuffer())});
-    mRaytracingShaderBindingTableHelper.AddHitGroup(L"HitGroup", { heapPointer, (void*)(mDragonModel->Meshes()[0]->GetVertexBuffer())});
+    mRaytracingShaderBindingTableHelper.AddMissProgram(L"ShadowMiss", { heapPointer });
+    mRaytracingShaderBindingTableHelper.AddHitGroup(L"HitGroup", { heapPointer/*, (void*)(mPlaneModel->Meshes()[0]->GetVertexBuffer())*/});
+	//mRaytracingShaderBindingTableHelper.AddHitGroup(L"HitGroup", { heapPointer, (void*)(mDragonModel->Meshes()[0]->GetVertexBuffer()) }); 
+	mRaytracingShaderBindingTableHelper.AddHitGroup(L"ShadowHitGroup", { heapPointer/*, (void*)(mPlaneModel->Meshes()[0]->GetVertexBuffer())*/ });
+	//mRaytracingShaderBindingTableHelper.AddHitGroup(L"ShadowHitGroup", { heapPointer, (void*)(mDragonModel->Meshes()[0]->GetVertexBuffer()) });
     
     // Compute the size of the SBT given the number of shaders and their
     // parameters
@@ -925,7 +930,12 @@ void DXRSExampleScene::Render()
 
         // Bind the raytracing pipeline
         commandListDXR->SetPipelineState1(mRaytracingPSO.Get());
-        // Dispatch the rays and write to the raytracing output
+
+        // Dispatch the rays for reflections and write to the raytracing output
+        commandListDXR->DispatchRays(&desc);
+
+        // Dispatch the rays for shadows and write to the raytracing output
+        desc.RayGenerationShaderRecord.StartAddress = mRaytracingShaderTableBuffer->GetGPUVirtualAddress() + rayGenerationSectionSizeInBytes / 2; //offset to shadow raygen shader
         commandListDXR->DispatchRays(&desc);
 
 		CD3DX12_RESOURCE_BARRIER transitionDepthBack = CD3DX12_RESOURCE_BARRIER::Transition(mSandboxFramework->GetDepthStencil(), D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE);
@@ -1025,6 +1035,7 @@ void DXRSExampleScene::UpdateImGui()
         ImGui::SliderFloat4("Light Color", mDirectionalLightColor, 0.0f, 1.0f);
         ImGui::SliderFloat4("Light Direction", mDirectionalLightDir, 0.0f, 1.0f);
         ImGui::SliderFloat("Light Intensity", &mDirectionalLightIntensity, 0.0f, 5.0f);
+        ImGui::SliderFloat("Shadow Intensity", &mDirectionalLightShadowIntensity, 0.0f, 1.0f);
         ImGui::SliderFloat("Orbit camera radius", &mCameraRadius, 5.0f, 50.0f);
         ImGui::End();
     }
@@ -1037,13 +1048,15 @@ void DXRSExampleScene::UpdateLights()
     //TODO move from update
     LightsInfoCBData lightData = {};
     DirectionalLightData dirLight = {};
-    dirLight.Colour = XMFLOAT4(mDirectionalLightColor[0], mDirectionalLightColor[1], mDirectionalLightColor[2], mDirectionalLightColor[3]);
+    dirLight.Color = XMFLOAT4(mDirectionalLightColor[0], mDirectionalLightColor[1], mDirectionalLightColor[2], mDirectionalLightColor[3]);
     dirLight.Direction = XMFLOAT4(mDirectionalLightDir[0], mDirectionalLightDir[1], mDirectionalLightDir[2], mDirectionalLightDir[3]);
     dirLight.Intensity = mDirectionalLightIntensity;
+    dirLight.ShadowIntensity = mDirectionalLightShadowIntensity;
 
-    lightData.DirectionalLight.Colour = dirLight.Colour;
+    lightData.DirectionalLight.Color = dirLight.Color;
     lightData.DirectionalLight.Direction = dirLight.Direction;
     lightData.DirectionalLight.Intensity = dirLight.Intensity;
+    lightData.DirectionalLight.ShadowIntensity = dirLight.ShadowIntensity;
 
     memcpy(mLightsInfoCB->Map(), &lightData, sizeof(lightData));
 }

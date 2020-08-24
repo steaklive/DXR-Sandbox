@@ -3,18 +3,18 @@ C:\Users\Zhenya\Documents\GraphicsProgramming\DXR-Sandbox\source\DXRSGraphics.h(
 C:\Users\Zhenya\Documents\GraphicsProgramming\DXR-Sandbox\source\DXRSMesh.h(50,23): warning C4267: 'return': conversion from 'size_t' to 'UINT', possible loss of data
 C:\Users\Zhenya\Documents\GraphicsProgramming\DXR-Sandbox\source\DXRSExampleScene.h(120,58): warning C4305: 'initializing': truncation from 'double' to 'float'
 C:\Users\Zhenya\Documents\GraphicsProgramming\DXR-Sandbox\source\DXRSExampleScene.cpp(42,188): warning C4305: 'argument': truncation from 'double' to 'float'
-C:\Users\Zhenya\Documents\GraphicsProgramming\DXR-Sandbox\source\DXRSExampleScene.cpp(777,138): warning C4244: 'argument': conversion from 'LONG' to 'FLOAT', possible loss of data
-C:\Users\Zhenya\Documents\GraphicsProgramming\DXR-Sandbox\source\DXRSExampleScene.cpp(777,96): warning C4244: 'argument': conversion from 'LONG' to 'FLOAT', possible loss of data
-C:\Users\Zhenya\Documents\GraphicsProgramming\DXR-Sandbox\source\DXRSExampleScene.cpp(778,44): warning C4244: 'argument': conversion from 'float' to 'LONG', possible loss of data
-C:\Users\Zhenya\Documents\GraphicsProgramming\DXR-Sandbox\source\DXRSExampleScene.cpp(778,38): warning C4244: 'argument': conversion from 'float' to 'LONG', possible loss of data
-C:\Users\Zhenya\Documents\GraphicsProgramming\DXR-Sandbox\source\DXRSExampleScene.cpp(922,27): warning C4244: '=': conversion from 'float' to 'UINT', possible loss of data
-C:\Users\Zhenya\Documents\GraphicsProgramming\DXR-Sandbox\source\DXRSExampleScene.cpp(923,28): warning C4244: '=': conversion from 'float' to 'UINT', possible loss of data
-C:\Users\Zhenya\Documents\GraphicsProgramming\DXR-Sandbox\source\DXRSExampleScene.cpp(984,17): warning C4244: 'initializing': conversion from 'LONG' to 'float', possible loss of data
-C:\Users\Zhenya\Documents\GraphicsProgramming\DXR-Sandbox\source\DXRSExampleScene.cpp(985,18): warning C4244: 'initializing': conversion from 'LONG' to 'float', possible loss of data
-C:\Users\Zhenya\Documents\GraphicsProgramming\DXR-Sandbox\source\DXRSExampleScene.cpp(1064,33): warning C4244: '=': conversion from 'int' to 'float', possible loss of data
-C:\Users\Zhenya\Documents\GraphicsProgramming\DXR-Sandbox\source\DXRSExampleScene.cpp(1065,33): warning C4244: '=': conversion from 'int' to 'float', possible loss of data
-C:\Users\Zhenya\Documents\GraphicsProgramming\DXR-Sandbox\source\DXRSExampleScene.cpp(1084,17): warning C4244: 'initializing': conversion from 'LONG' to 'float', possible loss of data
-C:\Users\Zhenya\Documents\GraphicsProgramming\DXR-Sandbox\source\DXRSExampleScene.cpp(1085,18): warning C4244: 'initializing': conversion from 'LONG' to 'float', possible loss of data
+C:\Users\Zhenya\Documents\GraphicsProgramming\DXR-Sandbox\source\DXRSExampleScene.cpp(782,138): warning C4244: 'argument': conversion from 'LONG' to 'FLOAT', possible loss of data
+C:\Users\Zhenya\Documents\GraphicsProgramming\DXR-Sandbox\source\DXRSExampleScene.cpp(782,96): warning C4244: 'argument': conversion from 'LONG' to 'FLOAT', possible loss of data
+C:\Users\Zhenya\Documents\GraphicsProgramming\DXR-Sandbox\source\DXRSExampleScene.cpp(783,44): warning C4244: 'argument': conversion from 'float' to 'LONG', possible loss of data
+C:\Users\Zhenya\Documents\GraphicsProgramming\DXR-Sandbox\source\DXRSExampleScene.cpp(783,38): warning C4244: 'argument': conversion from 'float' to 'LONG', possible loss of data
+C:\Users\Zhenya\Documents\GraphicsProgramming\DXR-Sandbox\source\DXRSExampleScene.cpp(927,27): warning C4244: '=': conversion from 'float' to 'UINT', possible loss of data
+C:\Users\Zhenya\Documents\GraphicsProgramming\DXR-Sandbox\source\DXRSExampleScene.cpp(928,28): warning C4244: '=': conversion from 'float' to 'UINT', possible loss of data
+C:\Users\Zhenya\Documents\GraphicsProgramming\DXR-Sandbox\source\DXRSExampleScene.cpp(989,17): warning C4244: 'initializing': conversion from 'LONG' to 'float', possible loss of data
+C:\Users\Zhenya\Documents\GraphicsProgramming\DXR-Sandbox\source\DXRSExampleScene.cpp(990,18): warning C4244: 'initializing': conversion from 'LONG' to 'float', possible loss of data
+C:\Users\Zhenya\Documents\GraphicsProgramming\DXR-Sandbox\source\DXRSExampleScene.cpp(1069,33): warning C4244: '=': conversion from 'int' to 'float', possible loss of data
+C:\Users\Zhenya\Documents\GraphicsProgramming\DXR-Sandbox\source\DXRSExampleScene.cpp(1070,33): warning C4244: '=': conversion from 'int' to 'float', possible loss of data
+C:\Users\Zhenya\Documents\GraphicsProgramming\DXR-Sandbox\source\DXRSExampleScene.cpp(1089,17): warning C4244: 'initializing': conversion from 'LONG' to 'float', possible loss of data
+C:\Users\Zhenya\Documents\GraphicsProgramming\DXR-Sandbox\source\DXRSExampleScene.cpp(1090,18): warning C4244: 'initializing': conversion from 'LONG' to 'float', possible loss of data
 imgui.obj : warning LNK4075: ignoring '/EDITANDCONTINUE' due to '/INCREMENTAL:NO' specification
      Creating library C:\Users\Zhenya\Documents\GraphicsProgramming\DXR-Sandbox\\bin\x64\Debug\DXR-Sandbox.lib and object C:\Users\Zhenya\Documents\GraphicsProgramming\DXR-Sandbox\\bin\x64\Debug\DXR-Sandbox.exp
   DXR-Sandbox.vcxproj -> C:\Users\Zhenya\Documents\GraphicsProgramming\DXR-Sandbox\\bin\x64\Debug\DXR-Sandbox.exe

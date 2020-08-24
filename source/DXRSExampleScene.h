@@ -99,13 +99,14 @@ private:
     __declspec(align(16)) struct DirectionalLightData
     {
         XMFLOAT4	Direction;
-        XMFLOAT4	Colour;
+        XMFLOAT4	Color;
         float		Intensity;
+        float       ShadowIntensity;
     };
     __declspec(align(16)) struct PointLightData
     {
         XMFLOAT4	Position;
-        XMFLOAT4	Colour;
+        XMFLOAT4	Color;
         float		Intensity;
         float		Attenuation;
         float		Radius;
@@ -120,6 +121,7 @@ private:
     float mDirectionalLightColor[4]{ 0.9, 0.9, 0.9, 1.0 };
     float mDirectionalLightDir[4]{ 0.0, 0.707f, 0.707f, 1.0 };
     float mDirectionalLightIntensity = 1.7f;
+    float mDirectionalLightShadowIntensity = 0.5f;
 
     // Raytracing
     IDxcBlob* mRaygenBlob;
