@@ -23,7 +23,7 @@ This project is not an ideal engine but just a way to test things quickly if you
 
 # TODO 
 - ~~Combine raytracing ouput with deferred lighting~~
-- ~~Ray Traced Shadows
+- ~~Ray Traced Shadows~~
 - ~~Ray Traced Reflections~~
 - Ray Traced Ambient Occlusion
 - PBR/texture support
