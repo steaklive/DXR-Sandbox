@@ -1,3 +1,5 @@
+# !!!MOVED TO: https://github.com/steaklive/DXR-Sandbox-GI
+
 # DXR-Sandbox
 A very simple toy-framework for testing DirectX Raytracing and improving DirectX 12 knowledge.
 
